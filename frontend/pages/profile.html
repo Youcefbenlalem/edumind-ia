@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>EDUMIND IA — Espace Utilisateur</title>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --emerald: #00c9a7; --navy: #0a0e1a; --navy-light: #1a2340;
+      --gold: #f5c842; --white: #f0f4ff; --muted: #8896b3;
+      --purple: #a78bfa; --coral: #fb923c; --red: #ff5f6d;
+    }
+    body { font-family: 'Syne','Tajawal',sans-serif; background: var(--navy); color: var(--white); min-height: 100vh; }
+    .bg-canvas { position: fixed; inset: 0; z-index: 0; background: radial-gradient(ellipse 60% 50% at 30% 30%, rgba(167,139,250,0.08) 0%, transparent 60%), var(--navy); }
+    nav { position: sticky; top: 0; z-index: 100; padding: 1rem 2rem; background: rgba(10,14,26,0.8); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(167,139,250,0.1); display: flex; align-items: center; gap: 1rem; }
+    .back-btn { color: var(--muted); text-decoration: none; font-size: 0.85rem; transition: color 0.2s; }
+    .back-btn:hover { color: var(--purple); }
+    .nav-title { font-size: 1.1rem; font-weight: 800; color: var(--purple); }
+
+    main { position: relative; z-index: 1; max-width: 1000px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+    /* HEADER */
+    .profile-header {
+      display: flex; align-items: center; gap: 1.5rem;
+      background: rgba(26,35,64,0.7); border: 1px solid rgba(167,139,250,0.15);
+      border-radius: 20px; padding: 1.8rem; margin-bottom: 2rem;
+      backdrop-filter: blur(12px);
+    }
+    .avatar-big {
+      width: 70px; height: 70px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--purple), var(--emerald));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2rem; flex-shrink: 0;
+      box-shadow: 0 0 0 4px rgba(167,139,250,0.2);
+    }
+    .profile-info h2 { font-size: 1.5rem; font-weight: 800; }
+    .profile-info p { color: var(--muted); font-size: 0.85rem; margin-top: 0.2rem; }
+    .prime-badge {
+      margin-left: auto; background: linear-gradient(135deg, var(--gold), #e6a800);
+      color: var(--navy); font-size: 0.7rem; font-weight: 800; letter-spacing: 2px;
+      padding: 0.3rem 0.8rem; border-radius: 8px;
+    }
+
+    /* TOGGLE COMPARE */
+    .toggle-row {
+      display: flex; align-items: center; gap: 1rem; margin-bottom: 2rem;
+      background: rgba(26,35,64,0.5); border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 14px; padding: 1rem 1.5rem;
+    }
+    .toggle-label { font-size: 0.85rem; color: var(--muted); }
+    .toggle-label-ar { font-family: 'Tajawal'; font-size: 0.9rem; }
+    .toggle {
+      position: relative; width: 44px; height: 24px; cursor: pointer;
+      background: rgba(255,255,255,0.1); border: none; border-radius: 100px;
+      transition: background 0.3s; flex-shrink: 0;
+    }
+    .toggle.on { background: var(--emerald); }
+    .toggle::after {
+      content: ''; position: absolute; top: 3px; left: 3px;
+      width: 18px; height: 18px; border-radius: 50%; background: white;
+      transition: transform 0.3s;
+    }
+    .toggle.on::after { transform: translateX(20px); }
+
+    /* GRID */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 1rem; margin-bottom: 1.5rem; }
+
+    .card {
+      background: rgba(26,35,64,0.7); border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 20px; padding: 1.5rem; backdrop-filter: blur(12px);
+    }
+    .card-title { font-size: 0.7rem; letter-spacing: 2px; font-weight: 700; text-transform: uppercase; margin-bottom: 1rem; }
+    .card-title.purple { color: var(--purple); }
+    .card-title.gold { color: var(--gold); }
+    .card-title.emerald { color: var(--emerald); }
+    .card-title.coral { color: var(--coral); }
+
+    /* STAT CARDS */
+    .stat-big { text-align: center; }
+    .stat-num { font-size: 2.5rem; font-weight: 800; }
+    .stat-num.emerald { color: var(--emerald); }
+    .stat-num.gold { color: var(--gold); }
+    .stat-num.purple { color: var(--purple); }
+    .stat-sub { font-size: 0.75rem; color: var(--muted); letter-spacing: 1px; }
+    .stat-sub-ar { font-family: 'Tajawal'; font-size: 0.85rem; color: var(--muted); }
+
+    /* CHART */
+    .chart-wrap { height: 200px; position: relative; }
+
+    /* MATIERE RANKING */
+    .matiere-list { display: flex; flex-direction: column; gap: 0.8rem; }
+    .matiere-item {
+      display: flex; align-items: center; gap: 0.8rem;
+    }
+    .m-rank { width: 24px; height: 24px; border-radius: 8px; background: rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 800; flex-shrink: 0; }
+    .m-rank.gold-bg { background: rgba(245,200,66,0.2); color: var(--gold); }
+    .m-rank.silver-bg { background: rgba(148,163,184,0.2); color: #94a3b8; }
+    .m-rank.bronze-bg { background: rgba(180,120,60,0.2); color: #b47a3c; }
+    .m-info { flex: 1; }
+    .m-name { font-size: 0.85rem; font-weight: 600; }
+    .m-bar { height: 4px; background: rgba(255,255,255,0.06); border-radius: 2px; margin-top: 0.3rem; }
+    .m-fill { height: 100%; border-radius: 2px; background: linear-gradient(90deg, var(--emerald), var(--gold)); }
+    .m-pts { font-size: 0.8rem; font-weight: 700; color: var(--emerald); }
+
+    /* FRIENDS */
+    .friends-section { margin-top: 1.5rem; }
+    .friends-section.hidden { display: none; }
+    .friend-top {
+      display: flex; align-items: center; gap: 0.8rem;
+      background: rgba(245,200,66,0.08); border: 1px solid rgba(245,200,66,0.2);
+      border-radius: 14px; padding: 1rem; margin-bottom: 1rem;
+    }
+    .friend-avatar { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, var(--gold), var(--coral)); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+    .friend-info .friend-name { font-size: 0.9rem; font-weight: 700; }
+    .friend-info .friend-pts { font-size: 0.8rem; color: var(--gold); }
+    .friend-badge { margin-left: auto; font-size: 1.2rem; }
+
+    .matiere-filter { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 1rem 0; }
+    .mf-btn {
+      padding: 0.4rem 0.9rem;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px; color: var(--muted); cursor: pointer; font-size: 0.78rem; font-family: 'Syne';
+      transition: all 0.2s;
+    }
+    .mf-btn.active { background: rgba(167,139,250,0.15); border-color: var(--purple); color: var(--purple); }
+
+    .compare-chart { height: 180px; }
+
+    /* PROGRESS MESSAGE */
+    .progress-msg {
+      text-align: center; padding: 1.5rem;
+      background: rgba(0,201,167,0.06); border: 1px solid rgba(0,201,167,0.15);
+      border-radius: 16px; margin-top: 1.5rem;
+    }
+    .prog-text { font-size: 1.1rem; font-weight: 700; }
+    .prog-text.positive { color: var(--emerald); }
+    .prog-text.negative { color: var(--coral); }
+    .prog-ar { font-family: 'Tajawal'; direction: rtl; font-size: 1rem; color: var(--muted); margin-top: 0.3rem; }
+
+    @media(max-width:650px) { .grid-2,.grid-3 { grid-template-columns:1fr; } .profile-header { flex-direction:column;text-align:center; } .prime-badge { margin-left:0; } }
+  </style>
+</head>
+<body>
+<div class="bg-canvas"></div>
+<nav>
+  <a href="dashboard.html" class="back-btn">← Accueil · الرئيسية</a>
+  <div class="nav-title">📊 Espace Utilisateur · الفضاء الشخصي</div>
+</nav>
+
+<main>
+  <!-- PROFILE HEADER -->
+  <div class="profile-header">
+    <div class="avatar-big">🎓</div>
+    <div class="profile-info">
+      <h2 id="profileName">Mohamed Benali</h2>
+      <p id="profileEmail">Membre depuis: Mars 2025</p>
+      <p style="margin-top:0.3rem;font-family:'Tajawal';color:var(--muted);">طالب مميز · Élève remarquable</p>
+    </div>
+    <div class="prime-badge">⭐ PRIME</div>
+  </div>
+
+  <!-- COMPARISON TOGGLE -->
+  <div class="toggle-row">
+    <button class="toggle on" id="compareToggle" onclick="toggleCompare()"></button>
+    <span class="toggle-label">Mode comparaison avec amis activé</span>
+    <span class="toggle-label-ar" style="margin-left:auto;">المقارنة مع الأصدقاء</span>
+  </div>
+
+  <!-- STATS ROW -->
+  <div class="grid-3">
+    <div class="card stat-big">
+      <div class="card-title emerald">Total Points · مجموع النقاط</div>
+      <div class="stat-num emerald" id="statTotal">1240</div>
+      <div class="stat-sub">POINTS</div>
+    </div>
+    <div class="card stat-big">
+      <div class="card-title gold">Max Score · الأعلى نقطة</div>
+      <div class="stat-num gold" id="statMax">98</div>
+      <div class="stat-sub">PRIME SCORE</div>
+    </div>
+    <div class="card stat-big">
+      <div class="card-title purple">Quiz Faits · الاختبارات</div>
+      <div class="stat-num purple" id="statQuiz">47</div>
+      <div class="stat-sub-ar">اختبار منجز</div>
+    </div>
+  </div>
+
+  <!-- EVOLUTION CHART + MATIERES -->
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title emerald">Évolution des points · تطور النقاط</div>
+      <div class="chart-wrap">
+        <canvas id="evolutionChart"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title gold">Classement des matières · ترتيب المواد</div>
+      <div class="matiere-list" id="matiereList"></div>
+    </div>
+  </div>
+
+  <!-- PROGRESS MESSAGE -->
+  <div class="progress-msg" id="progressMsg">
+    <div class="prog-text positive" id="progText">🎉 Félicitations ! Tu as progressé de 23% — Continue, tu es sur la bonne voie !</div>
+    <div class="prog-ar" id="progAr">تهانينا! لقد تقدمت بنسبة 23٪ — استمر، أنت على الطريق الصحيح!</div>
+  </div>
+
+  <!-- FRIENDS SECTION -->
+  <div class="friends-section" id="friendsSection">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+      <div>
+        <div style="font-size:1.1rem;font-weight:800;">👥 Mes Amis · أصدقائي</div>
+        <div style="font-family:'Tajawal';color:var(--muted);font-size:0.85rem;">قارن نفسك مع أصدقائك</div>
+      </div>
+      <button onclick="addFriend()" style="padding:0.5rem 1rem;background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.3);border-radius:10px;color:var(--purple);cursor:pointer;font-family:'Syne';font-size:0.8rem;">+ Ajouter un ami</button>
+    </div>
+
+    <!-- TOP FRIEND -->
+    <div class="friend-top">
+      <div class="friend-avatar">🥇</div>
+      <div class="friend-info">
+        <div class="friend-name" id="topFriendName">Amira K.</div>
+        <div class="friend-pts" id="topFriendPts">1580 pts — 1er en Sciences</div>
+      </div>
+      <div class="friend-badge">🏆</div>
+    </div>
+
+    <!-- MATIERE FILTER -->
+    <div style="font-size:0.75rem;color:var(--muted);letter-spacing:2px;margin-bottom:0.5rem;">COMPARER PAR MATIÈRE · قارن حسب المادة</div>
+    <div class="matiere-filter" id="matiereFilter"></div>
+
+    <!-- COMPARE CHART -->
+    <div class="card">
+      <div class="card-title purple">Comparaison · المقارنة</div>
+      <div class="compare-chart">
+        <canvas id="compareChart"></canvas>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+// Load user data
+const user = JSON.parse(localStorage.getItem('user') || '{}');
+document.getElementById('profileName').textContent = `${user.firstName || 'Mohamed'} ${user.lastName || 'Benali'}`;
+
+// Demo data
+const demoData = {
+  evolution: {
+    labels: ['Jan','Fév','Mar','Avr','Mai','Jun','Jul'],
+    mine:   [80, 150, 200, 320, 410, 580, 1240],
+  },
+  matieres: [
+    {name:'Arabe', ar:'اللغة العربية', pts:320, max:400},
+    {name:'Français', ar:'الفرنسية', pts:280, max:400},
+    {name:'Histoire-Géo', ar:'التاريخ والجغرافيا', pts:240, max:400},
+    {name:'Anglais', ar:'الإنجليزية', pts:200, max:400},
+    {name:'Sciences', ar:'العلوم', pts:160, max:400},
+  ],
+  friends: [
+    {name:'Amira K.', pts:[400,350,300,380,420]},
+    {name:'Karim B.', pts:[200,180,350,120,300]},
+    {name:'Sara M.', pts:[300,250,200,300,180]},
+  ]
+};
+
+// Evolution Chart
+const evCtx = document.getElementById('evolutionChart').getContext('2d');
+new Chart(evCtx, {
+  type: 'line',
+  data: {
+    labels: demoData.evolution.labels,
+    datasets: [{
+      label: 'Mes points',
+      data: demoData.evolution.mine,
+      borderColor: '#00c9a7', backgroundColor: 'rgba(0,201,167,0.1)',
+      borderWidth: 2, fill: true, tension: 0.4,
+      pointBackgroundColor: '#00c9a7', pointRadius: 4,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8896b3', font: { size: 11 } } },
+      y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8896b3', font: { size: 11 } } }
+    }
+  }
+});
+
+// Matieres ranking
+const ranks = ['🥇','🥈','🥉'];
+const rankClasses = ['gold-bg','silver-bg','bronze-bg'];
+const matiereList = document.getElementById('matiereList');
+demoData.matieres.forEach((m,i) => {
+  const pct = Math.round((m.pts/m.max)*100);
+  matiereList.innerHTML += `
+    <div class="matiere-item">
+      <div class="m-rank ${rankClasses[i]||''}">${i<3?ranks[i]:i+1}</div>
+      <div class="m-info">
+        <div style="display:flex;justify-content:space-between;">
+          <span class="m-name">${m.name} · <span style="font-family:'Tajawal'">${m.ar}</span></span>
+          <span class="m-pts">${m.pts}pts</span>
+        </div>
+        <div class="m-bar"><div class="m-fill" style="width:${pct}%"></div></div>
+      </div>
+    </div>`;
+});
+
+// Matiere filter
+const matiereNames = demoData.matieres.map(m=>m.name);
+const filterEl = document.getElementById('matiereFilter');
+let activeMat = 0;
+matiereNames.forEach((m,i) => {
+  const btn = document.createElement('button');
+  btn.className = 'mf-btn' + (i===0?' active':'');
+  btn.textContent = m;
+  btn.onclick = () => { activeMat = i; document.querySelectorAll('.mf-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); updateCompare(); };
+  filterEl.appendChild(btn);
+});
+
+// Compare Chart
+const cmpCtx = document.getElementById('compareChart').getContext('2d');
+let compareChart = new Chart(cmpCtx, {
+  type: 'bar',
+  data: { labels: [], datasets: [] },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { labels: { color: '#8896b3', font: { size: 11 } } } },
+    scales: {
+      x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#8896b3' } },
+      y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#8896b3' } }
+    }
+  }
+});
+
+function updateCompare() {
+  const myPts = [320,280,240,200,160][activeMat];
+  const labels = ['Moi',...demoData.friends.map(f=>f.name)];
+  const vals = [myPts,...demoData.friends.map(f=>f.pts[activeMat])];
+  const colors = ['rgba(0,201,167,0.7)','rgba(167,139,250,0.7)','rgba(245,200,66,0.7)','rgba(251,146,60,0.7)'];
+  compareChart.data.labels = labels;
+  compareChart.data.datasets = [{ label: matiereNames[activeMat], data: vals, backgroundColor: colors, borderRadius: 6 }];
+  compareChart.update();
+}
+updateCompare();
+
+// Toggle compare
+let compareOn = true;
+function toggleCompare() {
+  compareOn = !compareOn;
+  const btn = document.getElementById('compareToggle');
+  btn.classList.toggle('on', compareOn);
+  document.getElementById('friendsSection').classList.toggle('hidden', !compareOn);
+}
+
+function addFriend() {
+  alert('Fonctionnalité disponible après connexion · هذه الميزة متاحة بعد تسجيل الدخول');
+}
+
+// Load real stats from backend
+async function loadStats() {
+  const token = localStorage.getItem('token');
+  if (!token) return;
+  try {
+    const res = await fetch('http://localhost:5000/api/stats/profile', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      document.getElementById('statTotal').textContent = data.totalPoints || 1240;
+      document.getElementById('statMax').textContent = data.maxScore || 98;
+      document.getElementById('statQuiz').textContent = data.quizCompleted || 47;
+      if (data.progress !== undefined) {
+        const improved = data.progress >= 0;
+        const pct = Math.abs(data.progress);
+        document.getElementById('progText').textContent = improved
+          ? `🎉 Félicitations ! Tu as progressé de ${pct}% — Continue, tu es sur la bonne voie !`
+          : `💪 Tu as régressé de ${pct}% — Ne te décourage pas ! Chaque erreur est une leçon.`;
+        document.getElementById('progText').className = 'prog-text ' + (improved?'positive':'negative');
+        document.getElementById('progAr').textContent = improved
+          ? `تهانينا! لقد تقدمت بنسبة ${pct}٪ — استمر، أنت على الطريق الصحيح!`
+          : `تراجعت بنسبة ${pct}٪ — لا تستسلم! كل خطأ درس نتعلم منه.`;
+      }
+    }
+  } catch {}
+}
+loadStats();
+</script>
+</body>
+</html>

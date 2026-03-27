@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>EDUMIND IA — Tableau de bord</title>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --emerald: #00c9a7; --emerald-dark: #008f76;
+      --navy: #0a0e1a; --navy-mid: #111827; --navy-light: #1a2340;
+      --gold: #f5c842; --white: #f0f4ff; --muted: #8896b3;
+      --purple: #a78bfa; --coral: #fb923c;
+    }
+    body {
+      font-family: 'Syne', 'Tajawal', sans-serif;
+      background: var(--navy); color: var(--white);
+      min-height: 100vh; overflow-x: hidden;
+    }
+    .bg-canvas {
+      position: fixed; inset: 0; z-index: 0;
+      background:
+        radial-gradient(ellipse 70% 50% at 20% 20%, rgba(0,201,167,0.1) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 60% at 80% 80%, rgba(167,139,250,0.08) 0%, transparent 60%),
+        var(--navy);
+    }
+
+    /* NAVBAR */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      padding: 1rem 2rem;
+      background: rgba(10,14,26,0.8); backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(0,201,167,0.1);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .logo { font-size: 1.3rem; font-weight: 800; color: var(--emerald); letter-spacing: 2px; display: flex; align-items: center; gap: 0.5rem; }
+    .logo-icon { width: 32px; height: 32px; background: linear-gradient(135deg, var(--emerald), var(--gold)); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1rem; }
+    .nav-right { display: flex; align-items: center; gap: 1rem; }
+    .user-chip {
+      display: flex; align-items: center; gap: 0.6rem;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 100px; padding: 0.4rem 1rem 0.4rem 0.5rem;
+    }
+    .avatar { width: 32px; height: 32px; background: linear-gradient(135deg, var(--emerald), var(--purple)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; }
+    .user-name { font-size: 0.85rem; font-weight: 600; }
+    .logout-btn {
+      background: none; border: none; color: var(--muted);
+      cursor: pointer; font-size: 0.8rem; transition: color 0.2s;
+    }
+    .logout-btn:hover { color: var(--white); }
+
+    /* MAIN CONTENT */
+    main {
+      position: relative; z-index: 1;
+      max-width: 1000px; margin: 0 auto;
+      padding: 3rem 2rem;
+    }
+
+    /* GREETING */
+    .greeting {
+      text-align: center; margin-bottom: 3rem;
+      animation: fadeDown 0.7s ease both;
+    }
+    .greeting-ar {
+      font-family: 'Tajawal'; direction: rtl;
+      font-size: clamp(1.8rem, 5vw, 3rem);
+      font-weight: 900;
+      background: linear-gradient(90deg, var(--gold), var(--emerald));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+      margin-bottom: 0.3rem;
+    }
+    .greeting-fr {
+      font-size: clamp(1rem, 2.5vw, 1.4rem);
+      font-weight: 600; color: var(--muted);
+      letter-spacing: 2px;
+    }
+    .greeting-name {
+      font-size: clamp(1.2rem, 3vw, 1.8rem);
+      font-weight: 800; color: var(--white);
+      margin-top: 0.3rem;
+    }
+
+    /* STATS ROW */
+    .stats-row {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 1rem; margin-bottom: 3rem;
+      animation: fadeDown 0.7s 0.1s ease both;
+    }
+    .stat-card {
+      background: rgba(26,35,64,0.6);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 16px; padding: 1.2rem;
+      text-align: center; backdrop-filter: blur(10px);
+    }
+    .stat-num { font-size: 1.8rem; font-weight: 800; color: var(--emerald); }
+    .stat-label-fr { font-size: 0.75rem; color: var(--muted); letter-spacing: 1px; }
+    .stat-label-ar { font-family: 'Tajawal'; font-size: 0.85rem; color: var(--muted); direction: rtl; }
+
+    /* MAIN CARDS */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .main-card {
+      position: relative; overflow: hidden;
+      background: rgba(26,35,64,0.7);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 24px;
+      padding: 2.2rem;
+      backdrop-filter: blur(16px);
+      cursor: pointer; text-decoration: none; color: inherit;
+      display: block;
+      transition: all 0.4s cubic-bezier(.16,1,.3,1);
+      animation: fadeUp 0.6s ease both;
+    }
+    .main-card:nth-child(1) { animation-delay: 0.1s; }
+    .main-card:nth-child(2) { animation-delay: 0.2s; }
+    .main-card:nth-child(3) { animation-delay: 0.3s; }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(30px)} to{opacity:1;transform:translateY(0)} }
+
+    .main-card::before {
+      content: ''; position: absolute; inset: 0; border-radius: 24px;
+      opacity: 0; transition: opacity 0.4s;
+    }
+    .card-quiz::before { background: linear-gradient(135deg, rgba(0,201,167,0.08), transparent); }
+    .card-user::before { background: linear-gradient(135deg, rgba(167,139,250,0.1), transparent); }
+    .card-ia::before { background: linear-gradient(135deg, rgba(251,146,60,0.08), transparent); }
+
+    .main-card:hover { transform: translateY(-8px); }
+    .card-quiz:hover { border-color: rgba(0,201,167,0.3); box-shadow: 0 20px 60px rgba(0,201,167,0.15); }
+    .card-user:hover { border-color: rgba(167,139,250,0.3); box-shadow: 0 20px 60px rgba(167,139,250,0.15); }
+    .card-ia:hover { border-color: rgba(251,146,60,0.3); box-shadow: 0 20px 60px rgba(251,146,60,0.15); }
+
+    .main-card:hover::before { opacity: 1; }
+
+    .card-emoji {
+      font-size: 3rem; margin-bottom: 1.2rem;
+      display: block;
+      filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3));
+    }
+    .card-accent {
+      display: inline-block;
+      font-size: 0.65rem; font-weight: 800; letter-spacing: 2px; text-transform: uppercase;
+      padding: 0.25rem 0.7rem; border-radius: 100px; margin-bottom: 0.8rem;
+    }
+    .accent-quiz { background: rgba(0,201,167,0.15); color: var(--emerald); }
+    .accent-user { background: rgba(167,139,250,0.15); color: var(--purple); }
+    .accent-ia { background: rgba(251,146,60,0.15); color: var(--coral); }
+
+    .card-title-fr { font-size: 1.3rem; font-weight: 800; margin-bottom: 0.3rem; }
+    .card-title-ar { font-family: 'Tajawal'; direction: rtl; font-size: 1.1rem; color: var(--muted); margin-bottom: 1rem; }
+    .card-desc { font-size: 0.85rem; color: var(--muted); line-height: 1.7; margin-bottom: 0.8rem; }
+    .card-desc-ar { font-family: 'Tajawal'; direction: rtl; font-size: 0.85rem; color: rgba(136,150,179,0.7); line-height: 1.7; }
+
+    .card-cta {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-top: 1.5rem;
+      padding-top: 1.2rem;
+      border-top: 1px solid rgba(255,255,255,0.06);
+    }
+    .cta-text { font-size: 0.8rem; font-weight: 700; letter-spacing: 1px; }
+    .cta-text-quiz { color: var(--emerald); }
+    .cta-text-user { color: var(--purple); }
+    .cta-text-ia { color: var(--coral); }
+    .cta-ar { font-family: 'Tajawal'; font-size: 0.85rem; color: var(--muted); }
+    .cta-arrow { font-size: 1.2rem; transition: transform 0.3s; }
+    .main-card:hover .cta-arrow { transform: translateX(6px); }
+
+    .card-glow {
+      position: absolute; bottom: -30px; right: -30px;
+      width: 120px; height: 120px; border-radius: 50%;
+      filter: blur(40px); opacity: 0.15; pointer-events: none;
+    }
+    .glow-quiz { background: var(--emerald); }
+    .glow-user { background: var(--purple); }
+    .glow-ia { background: var(--coral); }
+
+    @keyframes fadeDown { from{opacity:0;transform:translateY(-20px)} to{opacity:1;transform:translateY(0)} }
+
+    @media(max-width:600px) {
+      .stats-row { grid-template-columns: repeat(3,1fr); }
+      .stat-num { font-size: 1.3rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-canvas"></div>
+
+  <nav>
+    <div class="logo">
+      <div class="logo-icon">🧠</div>
+      EDUMIND IA
+    </div>
+    <div class="nav-right">
+      <div class="user-chip">
+        <div class="avatar">👤</div>
+        <span class="user-name" id="navUserName">Élève</span>
+      </div>
+      <button class="logout-btn" onclick="logout()">Déconnexion</button>
+    </div>
+  </nav>
+
+  <main>
+    <!-- GREETING -->
+    <div class="greeting">
+      <div class="greeting-ar">!أهلاً بك أيها البطل</div>
+      <div class="greeting-fr">BONJOUR, CHAMPION !</div>
+      <div class="greeting-name" id="greetingName">Mohamed</div>
+    </div>
+
+    <!-- STATS -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-num" id="totalPoints">0</div>
+        <div class="stat-label-fr">Points totaux</div>
+        <div class="stat-label-ar">مجموع النقاط</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="quizDone">0</div>
+        <div class="stat-label-fr">Quiz complétés</div>
+        <div class="stat-label-ar">الاختبارات المنجزة</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="streak">0🔥</div>
+        <div class="stat-label-fr">Jours de suite</div>
+        <div class="stat-label-ar">أيام متواصلة</div>
+      </div>
+    </div>
+
+    <!-- MAIN CARDS -->
+    <div class="cards-grid">
+
+      <!-- QUIZ & QUESTIONS -->
+      <a href="quiz.html" class="main-card card-quiz">
+        <div class="card-glow glow-quiz"></div>
+        <span class="card-emoji">🎯</span>
+        <div class="card-accent accent-quiz">Quiz · اختبارات</div>
+        <div class="card-title-fr">Quiz & Questions</div>
+        <div class="card-title-ar">الاختبارات والأسئلة</div>
+        <p class="card-desc">Lance-toi dans des quiz adaptés à ton année scolaire, ta filière et tes leçons selon le programme algérien.</p>
+        <p class="card-desc-ar">اختبارات تفاعلية مخصصة لمستواك الدراسي ووفق المنهج الجزائري</p>
+        <div class="card-cta">
+          <div>
+            <div class="cta-text cta-text-quiz">COMMENCER UN QUIZ</div>
+            <div class="cta-ar">ابدأ الاختبار</div>
+          </div>
+          <span class="cta-arrow">→</span>
+        </div>
+      </a>
+
+      <!-- ESPACE UTILISATEUR -->
+      <a href="profile.html" class="main-card card-user">
+        <div class="card-glow glow-user"></div>
+        <span class="card-emoji">📊</span>
+        <div class="card-accent accent-user">Profil · الملف الشخصي</div>
+        <div class="card-title-fr">Espace Utilisateur</div>
+        <div class="card-title-ar">الفضاء الشخصي</div>
+        <p class="card-desc">Suis ta progression, compare-toi à tes amis et vois tes matières les plus maîtrisées avec des graphiques.</p>
+        <p class="card-desc-ar">تابع تقدمك وقارن نفسك مع أصدقائك وشاهد إحصاءاتك</p>
+        <div class="card-cta">
+          <div>
+            <div class="cta-text cta-text-user">MON ESPACE</div>
+            <div class="cta-ar">فضائي الشخصي</div>
+          </div>
+          <span class="cta-arrow">→</span>
+        </div>
+      </a>
+
+      <!-- IA ÉDUCATIF -->
+      <a href="ia.html" class="main-card card-ia">
+        <div class="card-glow glow-ia"></div>
+        <span class="card-emoji">🤖</span>
+        <div class="card-accent accent-ia">IA · الذكاء الاصطناعي</div>
+        <div class="card-title-fr">IA Éducatif</div>
+        <div class="card-title-ar">المساعد الذكي التعليمي</div>
+        <p class="card-desc">Pose tes questions à une IA spécialisée dans le programme scolaire algérien. Répond selon ta méthodologie.</p>
+        <p class="card-desc-ar">اسأل الذكاء الاصطناعي واحصل على إجابات وفق المنهج والمنهجية الجزائرية</p>
+        <div class="card-cta">
+          <div>
+            <div class="cta-text cta-text-ia">POSER UNE QUESTION</div>
+            <div class="cta-ar">اطرح سؤالاً</div>
+          </div>
+          <span class="cta-arrow">→</span>
+        </div>
+      </a>
+
+    </div>
+  </main>
+
+  <script>
+    // Load user info
+    const user = JSON.parse(localStorage.getItem('user') || '{"firstName":"Champion"}');
+    document.getElementById('navUserName').textContent = user.firstName || 'Élève';
+    document.getElementById('greetingName').textContent = (user.firstName || '') + ' ' + (user.lastName || '');
+
+    // Load stats
+    async function loadStats() {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      try {
+        const res = await fetch('http://localhost:5000/api/stats', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          document.getElementById('totalPoints').textContent = data.totalPoints || 0;
+          document.getElementById('quizDone').textContent = data.quizCompleted || 0;
+          document.getElementById('streak').textContent = (data.streak || 0) + '🔥';
+        }
+      } catch {}
+    }
+    loadStats();
+
+    function logout() {
+      localStorage.clear();
+      window.location.href = '../index.html';
+    }
+  </script>
+</body>
+</html>

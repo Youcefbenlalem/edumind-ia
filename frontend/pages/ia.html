@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>EDUMIND IA — Professeur IA</title>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --emerald: #00c9a7; --navy: #0a0e1a; --navy-light: #1a2340;
+      --gold: #f5c842; --white: #f0f4ff; --muted: #8896b3; --coral: #fb923c;
+    }
+    body { font-family: 'Syne','Tajawal',sans-serif; background: var(--navy); color: var(--white); min-height: 100vh; display: flex; flex-direction: column; }
+    .bg-canvas { position: fixed; inset: 0; z-index: 0; background: radial-gradient(ellipse 50% 50% at 80% 20%, rgba(251,146,60,0.08) 0%, transparent 60%), var(--navy); }
+
+    nav { position: sticky; top: 0; z-index: 100; padding: 1rem 2rem; background: rgba(10,14,26,0.8); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(251,146,60,0.1); display: flex; align-items: center; gap: 1rem; }
+    .back-btn { color: var(--muted); text-decoration: none; font-size: 0.85rem; transition: color 0.2s; }
+    .back-btn:hover { color: var(--coral); }
+    .nav-title { font-size: 1.1rem; font-weight: 800; color: var(--coral); }
+    .ia-indicator { margin-left: auto; display: flex; align-items: center; gap: 0.4rem; font-size: 0.75rem; color: var(--emerald); }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--emerald); animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.8)} }
+
+    .chat-container {
+      position: relative; z-index: 1;
+      display: flex; flex-direction: column;
+      max-width: 850px; width: 100%; margin: 0 auto;
+      padding: 1.5rem; flex: 1;
+    }
+
+    /* SETUP SELECTOR */
+    .setup-bar {
+      display: flex; gap: 0.8rem; flex-wrap: wrap; margin-bottom: 1.5rem;
+      background: rgba(26,35,64,0.6); border: 1px solid rgba(251,146,60,0.12);
+      border-radius: 16px; padding: 1.2rem; backdrop-filter: blur(12px);
+    }
+    .setup-select {
+      flex: 1; min-width: 130px;
+      background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 10px; padding: 0.6rem 0.9rem;
+      color: var(--white); font-family: 'Syne'; font-size: 0.82rem;
+      outline: none; cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    .setup-select:focus { border-color: var(--coral); }
+    .setup-select option { background: var(--navy-light); }
+
+    /* CHAT MESSAGES */
+    .messages {
+      flex: 1; display: flex; flex-direction: column; gap: 1rem;
+      overflow-y: auto; min-height: 400px; max-height: 55vh;
+      padding: 0.5rem; margin-bottom: 1rem;
+    }
+    .message { display: flex; gap: 0.8rem; animation: msgIn 0.3s ease; }
+    @keyframes msgIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+    .msg-avatar {
+      width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; font-size: 1rem;
+    }
+    .msg-ia { background: linear-gradient(135deg, var(--coral), #e05a00); }
+    .msg-user { background: linear-gradient(135deg, var(--emerald), #007a62); }
+
+    .msg-bubble {
+      max-width: 75%; padding: 1rem 1.2rem; border-radius: 16px;
+      line-height: 1.7; font-size: 0.9rem;
+    }
+    .msg-bubble.ia {
+      background: rgba(251,146,60,0.08); border: 1px solid rgba(251,146,60,0.15);
+      border-top-left-radius: 4px;
+    }
+    .msg-bubble.user {
+      background: rgba(0,201,167,0.1); border: 1px solid rgba(0,201,167,0.2);
+      margin-left: auto; border-top-right-radius: 4px;
+    }
+    .message.user { flex-direction: row-reverse; }
+    .msg-meta { font-size: 0.7rem; color: var(--muted); margin-bottom: 0.3rem; letter-spacing: 1px; }
+
+    /* TYPING INDICATOR */
+    .typing { display: flex; gap: 0.4rem; align-items: center; padding: 0.8rem 1rem; }
+    .typing-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--coral); animation: typingBounce 1.2s infinite; }
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes typingBounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-8px)} }
+
+    /* INPUT AREA */
+    .input-area {
+      background: rgba(26,35,64,0.8); border: 1px solid rgba(251,146,60,0.15);
+      border-radius: 16px; padding: 0.8rem;
+      display: flex; gap: 0.8rem; align-items: flex-end;
+      backdrop-filter: blur(16px);
+    }
+    .msg-input {
+      flex: 1; background: none; border: none; outline: none;
+      color: var(--white); font-family: 'Syne'; font-size: 0.9rem;
+      resize: none; max-height: 120px; padding: 0.3rem 0;
+      line-height: 1.5;
+    }
+    .msg-input::placeholder { color: rgba(136,150,179,0.5); }
+    .send-btn {
+      width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--coral), #d44a00);
+      border: none; cursor: pointer; color: white; font-size: 1rem;
+      transition: all 0.2s; display: flex; align-items: center; justify-content: center;
+    }
+    .send-btn:hover { transform: scale(1.05); box-shadow: 0 4px 15px rgba(251,146,60,0.4); }
+    .send-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    /* SUGGESTIONS */
+    .suggestions {
+      display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem;
+    }
+    .sugg-btn {
+      padding: 0.4rem 0.9rem;
+      background: rgba(251,146,60,0.08); border: 1px solid rgba(251,146,60,0.2);
+      border-radius: 100px; color: var(--coral); cursor: pointer;
+      font-size: 0.75rem; font-family: 'Syne'; transition: all 0.2s;
+    }
+    .sugg-btn:hover { background: rgba(251,146,60,0.15); }
+
+    /* FORMATTING for AI responses */
+    .msg-bubble.ia strong { color: var(--coral); }
+    .msg-bubble.ia em { color: var(--gold); font-style: normal; font-weight: 600; }
+    .msg-bubble.ia code { background: rgba(255,255,255,0.08); padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.85em; }
+  </style>
+</head>
+<body>
+<div class="bg-canvas"></div>
+
+<nav>
+  <a href="dashboard.html" class="back-btn">← Accueil · الرئيسية</a>
+  <div class="nav-title">🤖 IA Éducatif · المساعد الذكي</div>
+  <div class="ia-indicator"><div class="dot"></div> IA Active · الذكاء نشط</div>
+</nav>
+
+<div class="chat-container">
+  <!-- SETUP -->
+  <div class="setup-bar">
+    <select class="setup-select" id="selAnnee" onchange="updateFiliereOptions()">
+      <option value="">Année scolaire · السنة</option>
+      <option value="1am">1ère AM</option>
+      <option value="2am">2ème AM</option>
+      <option value="3am">3ème AM</option>
+      <option value="4am">4ème AM (BEM)</option>
+      <option value="1as">1ère AS</option>
+      <option value="2as">2ème AS</option>
+      <option value="3as">3ème AS</option>
+      <option value="bac">BAC</option>
+    </select>
+    <select class="setup-select" id="selFiliere" style="display:none">
+      <option value="">Filière · الشعبة</option>
+    </select>
+    <select class="setup-select" id="selMatiere">
+      <option value="">Matière · المادة</option>
+      <option>Arabe</option><option>Français</option><option>Anglais</option>
+      <option>Mathématiques</option><option>Sciences Naturelles</option>
+      <option>Physique-Chimie</option><option>Histoire-Géographie</option>
+      <option>Éducation Islamique</option><option>Philosophie</option>
+    </select>
+  </div>
+
+  <!-- SUGGESTIONS -->
+  <div class="suggestions" id="suggestions">
+    <button class="sugg-btn" onclick="sendSugg(this)">Explique-moi la photosynthèse</button>
+    <button class="sugg-btn" onclick="sendSugg(this)">Comment rédiger une introduction ?</button>
+    <button class="sugg-btn" onclick="sendSugg(this)">Méthode de la dissertation</button>
+    <button class="sugg-btn" onclick="sendSugg(this)">اشرح لي قاعدة الفاعل</button>
+    <button class="sugg-btn" onclick="sendSugg(this)">Règles de la conjugaison</button>
+  </div>
+
+  <!-- MESSAGES -->
+  <div class="messages" id="messages">
+    <div class="message">
+      <div class="msg-avatar msg-ia">🤖</div>
+      <div>
+        <div class="msg-meta">IA ÉDUCATIF · المساعد التعليمي</div>
+        <div class="msg-bubble ia">
+          <strong>مرحباً بك! أنا مساعدك التعليمي الذكي.</strong><br><br>
+          Bonjour ! Je suis ton assistant IA spécialisé dans le <strong>programme scolaire algérien</strong>. 
+          Je vais t'expliquer les leçons selon la méthodologie officielle algérienne.<br><br>
+          <em>👆 Sélectionne ton année, ta filière et ta matière en haut pour des réponses personnalisées !</em>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INPUT -->
+  <div class="input-area">
+    <textarea class="msg-input" id="msgInput" placeholder="Pose ta question ici · اطرح سؤالك هنا..." rows="1"
+      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMsg()}"
+      oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
+    <button class="send-btn" id="sendBtn" onclick="sendMsg()">➤</button>
+  </div>
+</div>
+
+<script>
+const FILIERES = {
+  '1as': ['Scientifique','Lettres & Sciences Humaines'],
+  '2as': ['Mathématiques','Technique Mathématique','Sciences Expérimentales','Gestion & Économie','Lettres & Sciences Humaines','Langues Étrangères','Philosophie'],
+  '3as': ['Mathématiques','Technique Mathématique','Sciences Expérimentales','Gestion & Économie','Lettres & Sciences Humaines','Langues Étrangères','Philosophie'],
+  'bac': ['Mathématiques','Technique Mathématique','Sciences Expérimentales','Gestion & Économie','Lettres & Sciences Humaines','Langues Étrangères','Philosophie'],
+};
+
+function updateFiliereOptions() {
+  const annee = document.getElementById('selAnnee').value;
+  const sel = document.getElementById('selFiliere');
+  const lyceeYears = ['1as','2as','3as','bac'];
+  if (lyceeYears.includes(annee) && FILIERES[annee]) {
+    sel.innerHTML = '<option value="">Filière · الشعبة</option>' + FILIERES[annee].map(f=>`<option>${f}</option>`).join('');
+    sel.style.display = '';
+  } else {
+    sel.style.display = 'none';
+  }
+}
+
+let chatHistory = [];
+let isLoading = false;
+
+function getContext() {
+  const annee = document.getElementById('selAnnee').value;
+  const filiere = document.getElementById('selFiliere').value;
+  const matiere = document.getElementById('selMatiere').value;
+  let ctx = '';
+  if (annee) ctx += `Année: ${annee}`;
+  if (filiere) ctx += ` | Filière: ${filiere}`;
+  if (matiere) ctx += ` | Matière: ${matiere}`;
+  return ctx;
+}
+
+function sendSugg(btn) {
+  document.getElementById('msgInput').value = btn.textContent;
+  sendMsg();
+}
+
+async function sendMsg() {
+  const input = document.getElementById('msgInput');
+  const text = input.value.trim();
+  if (!text || isLoading) return;
+
+  isLoading = true;
+  document.getElementById('sendBtn').disabled = true;
+  document.getElementById('suggestions').style.display = 'none';
+  input.value = '';
+  input.style.height = 'auto';
+
+  addMessage('user', text);
+  chatHistory.push({ role: 'user', content: text });
+
+  const typingEl = addTyping();
+
+  const ctx = getContext();
+  const systemPrompt = `Tu es un professeur expert du programme scolaire algérien officiel (المنهاج الجزائري الرسمي).
+${ctx ? 'Contexte élève: ' + ctx : ''}
+
+RÈGLES ABSOLUES:
+1. Réponds TOUJOURS selon la méthodologie pédagogique algérienne officielle
+2. Si la matière est en arabe (Arabe, Éducation Islamique, Littérature Arabe), réponds principalement en arabe
+3. Sinon, réponds en français avec quelques mots arabes pour clarifier
+4. Structure tes réponses comme un vrai cours: définition, explication, exemple, règle
+5. Utilise des exemples tirés du contexte algérien (noms algériens, lieux algériens, situations locales)
+6. Si tu expliques une règle grammaticale française, donne des exemples simples adaptés au niveau
+7. Pour les exercices, suis la méthode des manuels scolaires algériens
+8. Sois encourageant et pédagogique, comme un bon professeur algérien`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: systemPrompt,
+        messages: chatHistory
+      })
+    });
+    const data = await res.json();
+    const reply = data.content?.map(i=>i.text||'').join('') || 'Je n\'ai pas pu générer une réponse. Réessaie !';
+    typingEl.remove();
+    const formattedReply = reply.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\*(.*?)\*/g,'<em>$1</em>').replace(/`(.*?)`/g,'<code>$1</code>').replace(/\n/g,'<br>');
+    addMessage('ia', formattedReply, true);
+    chatHistory.push({ role: 'assistant', content: reply });
+  } catch(e) {
+    typingEl.remove();
+    addMessage('ia', 'Désolé, une erreur s\'est produite. Vérifie ta connexion et réessaie.<br><br>عذراً، حدث خطأ. تحقق من اتصالك وحاول مجدداً.');
+  }
+
+  isLoading = false;
+  document.getElementById('sendBtn').disabled = false;
+  input.focus();
+}
+
+function addMessage(role, text, isHtml=false) {
+  const msgs = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = `message ${role}`;
+  const isIa = role === 'ia';
+  div.innerHTML = `
+    <div class="msg-avatar ${isIa?'msg-ia':'msg-user'}">${isIa?'🤖':'👤'}</div>
+    <div>
+      <div class="msg-meta">${isIa?'IA ÉDUCATIF · المساعد':'TOI · أنت'}</div>
+      <div class="msg-bubble ${isIa?'ia':'user'}">${isHtml?text:escHtml(text)}</div>
+    </div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  return div;
+}
+
+function addTyping() {
+  const msgs = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = 'message';
+  div.innerHTML = `
+    <div class="msg-avatar msg-ia">🤖</div>
+    <div>
+      <div class="msg-meta">IA ÉDUCATIF</div>
+      <div class="msg-bubble ia">
+        <div class="typing">
+          <div class="typing-dot"></div>
+          <div class="typing-dot"></div>
+          <div class="typing-dot"></div>
+        </div>
+      </div>
+    </div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  return div;
+}
+
+function escHtml(t) {
+  return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>EDUMIND IA — Quiz & Questions</title>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --emerald: #00c9a7; --emerald-dark: #008f76;
+      --navy: #0a0e1a; --navy-light: #1a2340;
+      --gold: #f5c842; --white: #f0f4ff; --muted: #8896b3;
+      --purple: #a78bfa; --red: #ff5f6d;
+    }
+    body { font-family: 'Syne','Tajawal',sans-serif; background: var(--navy); color: var(--white); min-height: 100vh; }
+    .bg-canvas {
+      position: fixed; inset: 0; z-index: 0;
+      background: radial-gradient(ellipse 70% 50% at 50% 0%, rgba(0,201,167,0.1) 0%, transparent 60%), var(--navy);
+    }
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      padding: 1rem 2rem; background: rgba(10,14,26,0.8);
+      backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,201,167,0.1);
+      display: flex; align-items: center; gap: 1rem;
+    }
+    .back-btn { color: var(--muted); text-decoration: none; font-size: 0.85rem; transition: color 0.2s; }
+    .back-btn:hover { color: var(--emerald); }
+    .nav-title { font-size: 1.1rem; font-weight: 800; color: var(--emerald); }
+
+    main { position: relative; z-index: 1; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem; }
+
+    /* PAGE HEADER */
+    .page-header { text-align: center; margin-bottom: 3rem; }
+    .page-title-fr { font-size: clamp(2rem,5vw,3.5rem); font-weight: 800; }
+    .page-title-ar {
+      font-family: 'Tajawal'; direction: rtl;
+      font-size: clamp(1.4rem,3vw,2.2rem); color: var(--muted); margin-bottom: 0.5rem;
+    }
+    .page-sub { color: var(--muted); font-size: 0.95rem; margin-top: 0.5rem; }
+    .page-sub-ar { font-family: 'Tajawal'; direction: rtl; color: rgba(136,150,179,0.7); font-size: 0.9rem; }
+
+    /* SETUP CARD */
+    .setup-card {
+      background: rgba(26,35,64,0.7); border: 1px solid rgba(0,201,167,0.12);
+      border-radius: 24px; padding: 2.5rem; backdrop-filter: blur(12px);
+      margin-bottom: 2rem;
+    }
+
+    /* STEP INDICATOR */
+    .steps {
+      display: flex; gap: 0.5rem; margin-bottom: 2.5rem; align-items: center;
+    }
+    .step {
+      flex: 1; height: 4px; border-radius: 2px;
+      background: rgba(255,255,255,0.08); transition: background 0.4s;
+    }
+    .step.active { background: var(--emerald); }
+    .step.done { background: rgba(0,201,167,0.4); }
+
+    /* SELECT GROUPS */
+    .select-group { margin-bottom: 2rem; }
+    .select-label {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 0.75rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+      color: var(--emerald); margin-bottom: 1rem;
+    }
+    .label-ar { font-family: 'Tajawal'; font-size: 0.9rem; text-transform: none; letter-spacing: 0; }
+
+    /* OPTION BUTTONS */
+    .options-grid {
+      display: flex; flex-wrap: wrap; gap: 0.6rem;
+    }
+    .opt-btn {
+      padding: 0.6rem 1.1rem;
+      background: rgba(255,255,255,0.04);
+      border: 1.5px solid rgba(255,255,255,0.08);
+      border-radius: 10px;
+      color: var(--white); cursor: pointer; font-family: 'Syne'; font-size: 0.85rem;
+      transition: all 0.25s; white-space: nowrap;
+    }
+    .opt-btn:hover { border-color: rgba(0,201,167,0.4); background: rgba(0,201,167,0.06); }
+    .opt-btn.selected {
+      background: rgba(0,201,167,0.15); border-color: var(--emerald);
+      color: var(--emerald); font-weight: 700;
+    }
+
+    .opt-btn.diff-easy.selected { background: rgba(52,211,153,0.15); border-color: #34d399; color: #34d399; }
+    .opt-btn.diff-normal.selected { background: rgba(245,200,66,0.15); border-color: var(--gold); color: var(--gold); }
+    .opt-btn.diff-hard.selected { background: rgba(255,95,109,0.15); border-color: var(--red); color: var(--red); }
+
+    .hidden { display: none !important; }
+
+    .btn-start {
+      width: 100%; padding: 1.1rem;
+      background: linear-gradient(135deg, var(--emerald), var(--emerald-dark));
+      border: none; border-radius: 14px;
+      color: white; cursor: pointer;
+      font-family: 'Tajawal','Syne'; font-size: 1.1rem; font-weight: 800;
+      transition: all 0.3s; box-shadow: 0 6px 25px rgba(0,201,167,0.3);
+      margin-top: 1.5rem;
+    }
+    .btn-start:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(0,201,167,0.4); }
+    .btn-start:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* QUIZ AREA */
+    .quiz-area { display: none; }
+    .quiz-area.active { display: block; }
+
+    .quiz-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 1.5rem;
+    }
+    .quiz-info { font-size: 0.85rem; color: var(--muted); }
+    .quiz-score { font-size: 1rem; font-weight: 700; color: var(--gold); }
+
+    .progress-bar { height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; margin-bottom: 2rem; overflow: hidden; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, var(--emerald), var(--gold)); border-radius: 3px; transition: width 0.5s ease; }
+
+    .question-card {
+      background: rgba(26,35,64,0.7); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px; padding: 2rem; margin-bottom: 1.5rem;
+      backdrop-filter: blur(12px);
+    }
+    .q-num { font-size: 0.7rem; letter-spacing: 2px; color: var(--emerald); margin-bottom: 0.8rem; font-weight: 700; }
+    .q-text { font-size: 1.1rem; font-weight: 600; line-height: 1.6; margin-bottom: 1.5rem; }
+
+    .answers-grid { display: flex; flex-direction: column; gap: 0.8rem; }
+    .ans-btn {
+      padding: 1rem 1.2rem;
+      background: rgba(255,255,255,0.04);
+      border: 1.5px solid rgba(255,255,255,0.08);
+      border-radius: 12px; text-align: left;
+      color: var(--white); cursor: pointer; font-family: 'Syne'; font-size: 0.9rem;
+      transition: all 0.25s; display: flex; align-items: center; gap: 0.8rem;
+    }
+    .ans-btn:hover:not(:disabled) { border-color: rgba(0,201,167,0.4); background: rgba(0,201,167,0.06); }
+    .ans-btn.correct { border-color: #34d399; background: rgba(52,211,153,0.12); color: #34d399; }
+    .ans-btn.wrong { border-color: var(--red); background: rgba(255,95,109,0.1); color: var(--red); }
+    .ans-letter { width: 28px; height: 28px; border-radius: 8px; background: rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; flex-shrink: 0; }
+
+    .explanation-box {
+      display: none; margin-top: 1.2rem;
+      background: rgba(0,201,167,0.06); border: 1px solid rgba(0,201,167,0.2);
+      border-radius: 12px; padding: 1.2rem;
+    }
+    .explanation-box.show { display: block; }
+    .expl-title { font-size: 0.75rem; letter-spacing: 2px; color: var(--emerald); font-weight: 700; margin-bottom: 0.5rem; }
+    .expl-text { font-size: 0.9rem; color: var(--muted); line-height: 1.7; }
+
+    .btn-next {
+      width: 100%; padding: 0.9rem;
+      background: rgba(0,201,167,0.1); border: 1px solid rgba(0,201,167,0.3);
+      border-radius: 12px; color: var(--emerald);
+      cursor: pointer; font-family: 'Syne'; font-size: 0.95rem; font-weight: 700;
+      transition: all 0.25s; display: none; margin-top: 1rem;
+    }
+    .btn-next:hover { background: rgba(0,201,167,0.2); }
+    .btn-next.show { display: block; }
+
+    /* LOADING */
+    .loading-overlay {
+      display: none; text-align: center; padding: 3rem;
+    }
+    .loading-overlay.show { display: block; }
+    .spinner {
+      width: 50px; height: 50px; margin: 0 auto 1.5rem;
+      border: 3px solid rgba(0,201,167,0.2);
+      border-top-color: var(--emerald);
+      border-radius: 50%; animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* RESULTS */
+    .results-card {
+      display: none; background: rgba(26,35,64,0.85);
+      border: 1px solid rgba(0,201,167,0.2); border-radius: 24px; padding: 2.5rem;
+      text-align: center; backdrop-filter: blur(16px);
+    }
+    .results-card.show { display: block; }
+    .result-emoji { font-size: 4rem; margin-bottom: 1rem; }
+    .result-score { font-size: 3rem; font-weight: 800; color: var(--emerald); }
+    .result-msg { font-size: 1rem; color: var(--muted); margin: 0.5rem 0 1.5rem; }
+    .result-msg-ar { font-family: 'Tajawal'; direction: rtl; }
+    .btn-retry {
+      padding: 0.8rem 2rem; background: linear-gradient(135deg, var(--emerald), var(--emerald-dark));
+      border: none; border-radius: 12px; color: white; cursor: pointer;
+      font-family: 'Syne'; font-size: 0.95rem; font-weight: 700; margin: 0.4rem;
+    }
+    .btn-home {
+      padding: 0.8rem 2rem; background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; color: var(--muted);
+      cursor: pointer; font-family: 'Syne'; font-size: 0.95rem; text-decoration: none;
+      display: inline-block; margin: 0.4rem;
+    }
+    @media(max-width:600px) { .options-grid { gap: 0.5rem; } .opt-btn { font-size: 0.78rem; padding: 0.5rem 0.8rem; } }
+  </style>
+</head>
+<body>
+<div class="bg-canvas"></div>
+<nav>
+  <a href="dashboard.html" class="back-btn">← Accueil · الرئيسية</a>
+  <div class="nav-title">🎯 Quiz & Questions · الاختبارات</div>
+</nav>
+
+<main>
+  <!-- HEADER -->
+  <div class="page-header">
+    <div class="page-title-ar">الاختبارات والأسئلة</div>
+    <div class="page-title-fr">Quiz & Questions</div>
+    <p class="page-sub">Tu es prêt pour ça ?</p>
+    <p class="page-sub-ar">هل أنت مستعد لذلك؟</p>
+  </div>
+
+  <!-- SETUP -->
+  <div class="setup-card" id="setupCard">
+    <div class="steps">
+      <div class="step active" id="s1"></div>
+      <div class="step" id="s2"></div>
+      <div class="step" id="s3"></div>
+      <div class="step" id="s4"></div>
+      <div class="step" id="s5"></div>
+    </div>
+
+    <!-- ANNÉE SCOLAIRE -->
+    <div class="select-group" id="grpAnnee">
+      <div class="select-label">
+        Année scolaire <span class="label-ar">السنة الدراسية</span>
+      </div>
+      <div class="options-grid" id="optAnnee"></div>
+    </div>
+
+    <!-- FILIÈRE (lycée only) -->
+    <div class="select-group hidden" id="grpFiliere">
+      <div class="select-label">Filière <span class="label-ar">الشعبة</span></div>
+      <div class="options-grid" id="optFiliere"></div>
+    </div>
+
+    <!-- MATIÈRE -->
+    <div class="select-group hidden" id="grpMatiere">
+      <div class="select-label">Matière <span class="label-ar">المادة</span></div>
+      <div class="options-grid" id="optMatiere"></div>
+    </div>
+
+    <!-- LEÇON -->
+    <div class="select-group hidden" id="grpLecon">
+      <div class="select-label">Leçon <span class="label-ar">الدرس</span></div>
+      <div class="options-grid" id="optLecon"></div>
+    </div>
+
+    <!-- DIFFICULTÉ -->
+    <div class="select-group hidden" id="grpDiff">
+      <div class="select-label">Difficulté <span class="label-ar">مستوى الصعوبة</span></div>
+      <div class="options-grid">
+        <button class="opt-btn diff-easy" onclick="selectDiff('Facile','هيّن')">😊 Facile · هيّن</button>
+        <button class="opt-btn diff-normal" onclick="selectDiff('Normale','عادي')">🎯 Normale · عادي</button>
+        <button class="opt-btn diff-hard" onclick="selectDiff('Difficile','صعب')">🔥 Difficile · صعب</button>
+      </div>
+    </div>
+
+    <button class="btn-start" id="btnStart" disabled onclick="startQuiz()">
+      Commencer le Quiz · ابدأ الاختبار 🚀
+    </button>
+  </div>
+
+  <!-- LOADING -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+    <p style="color:var(--emerald);font-weight:700;font-size:1.1rem;">Génération des questions...</p>
+    <p style="font-family:'Tajawal';color:var(--muted);margin-top:0.3rem;">جارٍ إنشاء الأسئلة بالذكاء الاصطناعي</p>
+  </div>
+
+  <!-- QUIZ -->
+  <div class="quiz-area" id="quizArea">
+    <div class="quiz-header">
+      <div class="quiz-info" id="quizInfo">Question 1/10</div>
+      <div class="quiz-score" id="quizScore">Score: 0</div>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+    <div id="questionContainer"></div>
+    <button class="btn-next" id="btnNext" onclick="nextQuestion()">Question suivante → التالي</button>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="results-card" id="resultsCard">
+    <div class="result-emoji" id="resultEmoji">🏆</div>
+    <div class="result-score" id="resultScore">8/10</div>
+    <p class="result-msg" id="resultMsg"></p>
+    <p class="result-msg-ar" id="resultMsgAr"></p>
+    <div style="margin-top:1.5rem;">
+      <button class="btn-retry" onclick="resetQuiz()">Recommencer · أعد الاختبار</button>
+      <a href="dashboard.html" class="btn-home">Accueil · الرئيسية</a>
+    </div>
+  </div>
+</main>
+
+<script>
+// ══════════════════════════════════════════
+// ALGERIAN CURRICULUM DATA
+// ══════════════════════════════════════════
+const ANNEES = [
+  {id:'1am', label:'1ère AM', ar:'السنة 1 متوسط', lycee:false},
+  {id:'2am', label:'2ème AM', ar:'السنة 2 متوسط', lycee:false},
+  {id:'3am', label:'3ème AM', ar:'السنة 3 متوسط', lycee:false},
+  {id:'4am', label:'4ème AM (Brevet)', ar:'السنة 4 متوسط (BEM)', lycee:false},
+  {id:'1as', label:'1ère AS', ar:'السنة 1 ثانوي', lycee:true},
+  {id:'2as', label:'2ème AS', ar:'السنة 2 ثانوي', lycee:true},
+  {id:'3as', label:'3ème AS', ar:'السنة 3 ثانوي', lycee:true},
+  {id:'bac', label:'BAC', ar:'البكالوريا', lycee:true},
+];
+
+const FILIERES = {
+  '1as': [
+    {id:'scientifique', label:'Scientifique', ar:'علمي'},
+    {id:'lettres', label:'Lettres & Sciences Humaines', ar:'آداب وعلوم إنسانية'},
+  ],
+  '2as': [
+    {id:'math', label:'Mathématiques', ar:'رياضيات'},
+    {id:'technique', label:'Technique Mathématique', ar:'تقني رياضي'},
+    {id:'scientifique', label:'Sciences Expérimentales', ar:'علوم تجريبية'},
+    {id:'gestion', label:'Gestion & Économie', ar:'تسيير واقتصاد'},
+    {id:'lettres', label:'Lettres & Sciences Humaines', ar:'آداب وعلوم إنسانية'},
+    {id:'langues', label:'Langues Étrangères', ar:'لغات أجنبية'},
+    {id:'philo', label:'Philosophie', ar:'فلسفة'},
+  ],
+  '3as': [
+    {id:'math', label:'Mathématiques', ar:'رياضيات'},
+    {id:'technique', label:'Technique Mathématique', ar:'تقني رياضي'},
+    {id:'scientifique', label:'Sciences Expérimentales', ar:'علوم تجريبية'},
+    {id:'gestion', label:'Gestion & Économie', ar:'تسيير واقتصاد'},
+    {id:'lettres', label:'Lettres & Sciences Humaines', ar:'آداب وعلوم إنسانية'},
+    {id:'langues', label:'Langues Étrangères', ar:'لغات أجنبية'},
+    {id:'philo', label:'Philosophie', ar:'فلسفة'},
+  ],
+  'bac': [
+    {id:'math', label:'Mathématiques', ar:'رياضيات'},
+    {id:'technique', label:'Technique Mathématique', ar:'تقني رياضي'},
+    {id:'scientifique', label:'Sciences Expérimentales', ar:'علوم تجريبية'},
+    {id:'gestion', label:'Gestion & Économie', ar:'تسيير واقتصاد'},
+    {id:'lettres', label:'Lettres & Sciences Humaines', ar:'آداب وعلوم إنسانية'},
+    {id:'langues', label:'Langues Étrangères', ar:'لغات أجنبية'},
+    {id:'philo', label:'Philosophie', ar:'فلسفة'},
+  ],
+};
+
+const MATIERES = {
+  '1am': ['Arabe','Français','Mathématiques','Sciences Naturelles','Histoire-Géographie','Éducation Islamique','Anglais'],
+  '2am': ['Arabe','Français','Mathématiques','Sciences Naturelles','Histoire-Géographie','Éducation Islamique','Anglais'],
+  '3am': ['Arabe','Français','Mathématiques','Sciences Naturelles','Histoire-Géographie','Éducation Islamique','Anglais','Physique-Chimie'],
+  '4am': ['Arabe','Français','Mathématiques','Sciences Naturelles','Histoire-Géographie','Éducation Islamique','Anglais','Physique-Chimie'],
+  '1as_scientifique': ['Arabe','Français','Anglais','Mathématiques','Sciences Naturelles','Physique-Chimie','Histoire-Géographie','Éducation Islamique','Philosophie'],
+  '1as_lettres': ['Arabe','Français','Anglais','Histoire-Géographie','Éducation Islamique','Philosophie','Mathématiques'],
+  '2as_math': ['Arabe','Français','Anglais','Mathématiques','Physique-Chimie','Histoire-Géographie','Éducation Islamique','Philosophie'],
+  '2as_technique': ['Arabe','Français','Anglais','Mathématiques','Physique-Chimie','Histoire-Géographie','Sciences Techniques','Éducation Islamique'],
+  '2as_scientifique': ['Arabe','Français','Anglais','Mathématiques','Sciences Naturelles','Physique-Chimie','Histoire-Géographie','Éducation Islamique','Philosophie'],
+  '2as_gestion': ['Arabe','Français','Anglais','Mathématiques','Économie & Droit','Histoire-Géographie','Éducation Islamique','Comptabilité'],
+  '2as_lettres': ['Arabe','Français','Anglais','Histoire-Géographie','Éducation Islamique','Philosophie','Littérature Arabe'],
+  '2as_langues': ['Arabe','Français','Anglais','Histoire-Géographie','Éducation Islamique','Espagnol / Allemand'],
+  '2as_philo': ['Arabe','Français','Anglais','Histoire-Géographie','Éducation Islamique','Philosophie','Littérature Arabe'],
+  '3as_math': ['Arabe','Français','Anglais','Mathématiques','Physique-Chimie','Histoire-Géographie','Éducation Islamique','Philosophie'],
+  '3as_technique': ['Arabe','Français','Anglais','Mathématiques','Physique-Chimie','Sciences Techniques','Éducation Islamique'],
+  '3as_scientifique': ['Arabe','Français','Anglais','Mathématiques','Sciences Naturelles','Physique-Chimie','Histoire-Géographie','Éducation Islamique','Philosophie'],
+  '3as_gestion': ['Arabe','Français','Anglais','Mathématiques','Économie & Droit','Histoire-Géographie','Éducation Islamique','Comptabilité'],
+  '3as_lettres': ['Arabe','Français','Anglais','Histoire-Géographie','Éducation Islamique','Philosophie','Littérature Arabe'],
+  '3as_langues': ['Arabe','Français','Anglais','Histoire-Géographie','Éducation Islamique','Espagnol / Allemand'],
+  '3as_philo': ['Arabe','Français','Anglais','Histoire-Géographie','Éducation Islamique','Philosophie'],
+  'bac_math': ['Arabe','Français','Anglais','Mathématiques','Physique-Chimie','Histoire-Géographie','Éducation Islamique','Philosophie'],
+  'bac_technique': ['Arabe','Français','Anglais','Mathématiques','Physique-Chimie','Sciences Techniques','Éducation Islamique'],
+  'bac_scientifique': ['Arabe','Français','Anglais','Mathématiques','Sciences Naturelles','Physique-Chimie','Histoire-Géographie','Éducation Islamique','Philosophie'],
+  'bac_gestion': ['Arabe','Français','Anglais','Mathématiques','Économie & Droit','Histoire-Géographie','Éducation Islamique','Comptabilité'],
+  'bac_lettres': ['Arabe','Français','Anglais','Histoire-Géographie','Éducation Islamique','Philosophie','Littérature Arabe'],
+  'bac_langues': ['Arabe','Français','Anglais','Histoire-Géographie','Éducation Islamique','Espagnol / Allemand'],
+  'bac_philo': ['Arabe','Français','Anglais','Histoire-Géographie','Éducation Islamique','Philosophie'],
+};
+
+const LECONS = {
+  'Français_1am': ['Lire et comprendre un texte narratif','La phrase simple et ses constituants','Le groupe nominal','Les pronoms personnels','Le présent de l\'indicatif','Le passé composé','L\'imparfait','Les connecteurs logiques','La description','L\'expression de l\'opinion'],
+  'Français_2am': ['Le récit de vie','La biographie','Le discours rapporté direct/indirect','Le futur simple','Le conditionnel présent','La cause et la conséquence','L\'argumentation simple','La lettre formelle','Le champ lexical','La comparaison et la métaphore'],
+  'Français_3am': ['Le texte argumentatif','La concession et l\'opposition','Le subjonctif présent','Le participe présent','Les figures de style','L\'article de presse','Le débat et l\'exposé oral','La voix passive','Le texte explicatif','Les types de raisonnement'],
+  'Français_4am': ['La thèse et l\'antithèse','Le discours persuasif','Le mode conditionnel','Les propositions subordonnées','L\'ironie et la satire','Le texte prescriptif','L\'analyse littéraire','Les registres de langue','La synthèse de documents','La rédaction guidée'],
+  'Arabe_1am': ['النص السردي','المبتدأ والخبر','الجملة الفعلية','المضارع والماضي','ضمائر المتكلم','الصفة والموصوف','الاسم المعرفة والنكرة','الجمع المذكر والمؤنث','أدوات الاستفهام','التعبير الكتابي'],
+  'Arabe_2am': ['النص الوصفي','الفاعل والمفعول به','المثنى وجمع التكسير','الحال والتمييز','الأفعال الخمسة','الأسماء الموصولة','الجمل الاعتراضية','الصور البيانية','النص الحواري','الإنشاء الموجه'],
+  'Arabe_3am': ['النص الحجاجي','الإضافة والتوابع','الفعل المبني للمجهول','أساليب التوكيد','البلاغة: التشبيه والاستعارة','النص الإعلامي','تقنيات التلخيص','الإعراب التفصيلي','الشعر الجزائري الحديث','الكتابة الإبداعية'],
+  'Arabe_4am': ['الخطاب الحجاجي','الضمائر المتصلة والمنفصلة','الجملة الشرطية','المقال الأدبي','الظواهر اللغوية','البلاغة: الكناية والمجاز','الشعر العربي الكلاسيكي','النقد الأدبي','التعبير الشفهي','تحليل النصوص الأدبية'],
+  'Histoire-Géographie_1am': ['La préhistoire en Algérie','Les premières civilisations','La Numidie et les Berbères','La conquête romaine de l\'Afrique du Nord','Le commerce dans le monde ancien','Les grandes migrations humaines','Le relief et les paysages d\'Algérie','Les ressources naturelles','La population algérienne','Les villes et leur développement'],
+  'Histoire-Géographie_2am': ['L\'Islam : naissance et expansion','La civilisation islamique','L\'Algérie sous les dynasties berbères','Les croisades et leurs conséquences','L\'Empire ottoman','La Renaissance en Europe','Les grandes découvertes géographiques','Le commerce triangulaire','La géographie de l\'Afrique','Le Maghreb : caractéristiques géographiques'],
+  'Histoire-Géographie_3am': ['La colonisation française de l\'Algérie (1830)','La résistance algérienne','L\'évolution du mouvement nationaliste','La Seconde Guerre mondiale','La décolonisation en Afrique','La Guerre de libération nationale','Le développement économique mondial','Les organisations internationales','La géographie de l\'Europe','Les échanges commerciaux internationaux'],
+  'Histoire-Géographie_4am': ['Le 1er novembre 1954','Les phases de la Révolution algérienne','Les Accords d\'Évian et l\'indépendance','La Guerre Froide','Le Tiers-Monde et le non-alignement','La mondialisation','L\'environnement et le développement durable','L\'Algérie dans le monde arabe','La géographie de l\'Asie','Enjeux géopolitiques contemporains'],
+  'Sciences Naturelles_1am': ['La cellule : unité du vivant','La nutrition chez les êtres vivants','La digestion','La respiration','La circulation sanguine','La reproduction chez les plantes','La reproduction chez les animaux','Les écosystèmes','La chaîne alimentaire','L\'environnement et sa protection'],
+  'Sciences Naturelles_2am': ['L\'organisation du corps humain','Le système nerveux','Les organes des sens','Le squelette et les muscles','Les maladies infectieuses','L\'immunité naturelle et artificielle','La reproduction humaine','La génétique de base','Les plantes et leur rôle','Les microorganismes'],
+  'Sciences Naturelles_3am': ['La cellule eucaryote et procaryote','La photosynthèse','La respiration cellulaire','La mitose et la méiose','Les lois de Mendel','Les mutations génétiques','L\'évolution des espèces','La classification des êtres vivants','Les biotechnologies','L\'écologie et les cycles biogéochimiques'],
+  'Sciences Naturelles_4am': ['Le génie génétique','La reproduction cellulaire','Les systèmes de régulation','Le système endocrinien','La nutrition et la santé','Les maladies cardiovasculaires','Le système immunitaire avancé','La biodiversité','L\'impact de l\'Homme sur l\'environnement','Les ressources énergétiques'],
+  'Éducation Islamique_1am': ['أركان الإسلام','العقيدة الإسلامية','الطهارة والصلاة','الزكاة والصوم','السيرة النبوية','القرآن الكريم: التلاوة والتجويد','الأخلاق الإسلامية','الأسرة في الإسلام','المعاملات في الإسلام','القصص القرآني'],
+  'Éducation Islamique_2am': ['العبادات في الإسلام','الحج وأهميته','الجهاد في سبيل الله','الصحابة الكرام','الخلافة الراشدة','الأخلاق الحميدة','الإسلام والمجتمع','حقوق الإنسان في الإسلام','العلم والعلماء في الإسلام','الإسلام والحضارة'],
+  'Anglais_1am': ['Greetings and introductions','The verb to be','Describing people','Numbers and colors','School and classroom','My family','Food and drinks','Daily routines','Present simple tense','Question words (Wh- questions)'],
+  'Anglais_2am': ['Talking about likes and dislikes','Present continuous tense','Past simple tense','Describing places','Travel and transportation','Health and body','Comparing things (comparatives/superlatives)','Modal verbs (can, must, should)','Reading comprehension strategies','Writing a paragraph'],
+  'Anglais_3am': ['Past continuous vs past simple','Future tenses (will, going to)','Conditionals type 1 & 2','Passive voice introduction','Reported speech','Expressing opinions','Media and technology','Environment and ecology','Argumentative writing','Reading authentic texts'],
+  'Anglais_4am': ['Conditionals type 2 & 3','Reported speech advanced','Passive voice advanced','Modals of deduction','Gerunds and infinitives','Formal and informal writing','Analyzing texts','Critical thinking skills','Scientific English','Preparation for BEM examination'],
+  'Physique-Chimie_3am': ['La matière et ses états','Les atomes et les molécules','Les mélanges et solutions','La lumière et ses propriétés','La réflexion et la réfraction','Le son et ses caractéristiques','Les forces et le mouvement','La pression dans les fluides','L\'électricité statique','Les circuits électriques'],
+  'Physique-Chimie_4am': ['La structure de l\'atome','Les liaisons chimiques','Les réactions chimiques','L\'oxydoréduction','La cinématique','La dynamique: lois de Newton','L\'énergie mécanique','Les circuits en courant alternatif','Les phénomènes optiques','La radioactivité'],
+  'Philosophie_1as_scientifique': ['Introduction à la philosophie','La connaissance philosophique','La logique formelle','Le langage et la pensée','La perception et la réalité','La conscience et l\'identité','La vérité et ses critères','La science et ses méthodes','L\'éthique et la morale','La liberté humaine'],
+  'Philosophie_1as_lettres': ['Qu\'est-ce que la philosophie ?','Les présocratiques','Platon et la théorie des Idées','Aristote et la logique','La philosophie médiévale','Descartes et le rationalisme','Hume et l\'empirisme','Kant et la critique de la raison','La philosophie des Lumières','Marx et la dialectique'],
+  'Philosophie_2as_math': ['Le raisonnement scientifique','L\'hypothèse et la théorie','La causalité','Le déterminisme et l\'indéterminisme','Les mathématiques et la réalité','La vérité scientifique','L\'éthique de la recherche','La technique et la science','Le progrès scientifique','Philosophie de la connaissance'],
+  'Philosophie_2as_scientifique': ['La méthode scientifique','L\'observation et l\'expérience','La classification en sciences','Le vivant et ses propriétés','L\'évolution et le transformisme','La génétique et ses enjeux éthiques','L\'écologie philosophique','La biologie et la médecine','Philosophie de la biologie','Sciences et société'],
+  'Philosophie_2as_lettres': ['Le langage et la communication','L\'art et l\'esthétique','La religion et la philosophie','La politique et l\'État','La justice et le droit','L\'histoire et sa signification','La culture et la civilisation','L\'identité et l\'altérité','Les droits de l\'Homme','La philosophie contemporaine'],
+  'Sciences Naturelles_1as_scientifique': ['La molécule d\'ADN','La réplication de l\'ADN','La transcription et la traduction','La régulation de l\'expression génique','La méiose et la fécondation','Les lois de Mendel avancées','Les caractères héréditaires','L\'immunologie avancée','La physiologie de la nutrition','L\'écophysiologie'],
+  'Sciences Naturelles_2as_scientifique': ['La photosynthèse avancée','La respiration cellulaire avancée','Le métabolisme cellulaire','La régulation hormonale','Le système nerveux avancé','La coordination neuro-hormonale','L\'évolution des populations','La spéciation','La biologie moléculaire','Les biotechnologies avancées'],
+  'Sciences Naturelles_3as_scientifique': ['Révision de la génétique moléculaire','Révision de la physiologie humaine','Révision de l\'immunologie','Révision de l\'évolution','Révision de l\'écologie','Méthodologie de la dissertation scientifique','Analyse de documents scientifiques','Les thèmes transversaux','Préparation au BAC: sujets types','Corrections et conseils méthodologiques'],
+  'Économie & Droit_2as_gestion': ['Introduction à l\'économie','Les systèmes économiques','L\'offre et la demande','Le marché et ses mécanismes','La monnaie et le financement','Les entreprises et leurs formes juridiques','L\'État et son rôle économique','Le commerce international','Les sources du droit','Le contrat de travail'],
+  'Comptabilité_2as_gestion': ['Introduction à la comptabilité','Le bilan comptable','Le compte de résultat','Les opérations courantes','La TVA et la fiscalité','Les immobilisations','Les stocks et leur gestion','Les créances et dettes','La paie et les charges sociales','Analyse des états financiers'],
+  'Littérature Arabe_2as_lettres': ['الشعر الجاهلي','معلقات الجاهلية','الشعر الإسلامي','شعر صدر الإسلام','النثر العربي القديم','الشعر في العصر الأموي','الأدب في العصر العباسي','الشعر الأندلسي','النثر الفني في الأدب العربي','الأدب الجزائري المعاصر'],
+};
+
+// ══════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════
+let state = { annee:null, filiere:null, matiere:null, lecon:null, diff:null, diffAr:null };
+let quizData = { questions:[], current:0, score:0 };
+
+// ══════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════
+function init() {
+  const grid = document.getElementById('optAnnee');
+  ANNEES.forEach(a => {
+    const btn = document.createElement('button');
+    btn.className = 'opt-btn';
+    btn.innerHTML = `${a.label} <small style="opacity:.6;display:block;font-family:'Tajawal'">${a.ar}</small>`;
+    btn.onclick = () => selectAnnee(a);
+    grid.appendChild(btn);
+  });
+}
+
+function selectAnnee(a) {
+  state.annee = a; state.filiere = null; state.matiere = null; state.lecon = null; state.diff = null;
+  highlightOpt('optAnnee', a.id);
+  updateSteps();
+
+  if (a.lycee && FILIERES[a.id]) {
+    showFiliere(a.id);
+    document.getElementById('grpMatiere').classList.add('hidden');
+    document.getElementById('grpLecon').classList.add('hidden');
+    document.getElementById('grpDiff').classList.add('hidden');
+  } else {
+    document.getElementById('grpFiliere').classList.add('hidden');
+    showMatiere();
+  }
+  checkCanStart();
+}
+
+function showFiliere(anneeId) {
+  const filieres = FILIERES[anneeId] || [];
+  const grid = document.getElementById('optFiliere');
+  grid.innerHTML = '';
+  filieres.forEach(f => {
+    const btn = document.createElement('button');
+    btn.className = 'opt-btn';
+    btn.innerHTML = `${f.label} <small style="opacity:.6;display:block;font-family:'Tajawal'">${f.ar}</small>`;
+    btn.onclick = () => { state.filiere = f; highlightOpt('optFiliere', f.id); showMatiere(); checkCanStart(); };
+    grid.appendChild(btn);
+  });
+  document.getElementById('grpFiliere').classList.remove('hidden');
+}
+
+function showMatiere() {
+  const key = state.annee && state.filiere ? `${state.annee.id}_${state.filiere.id}` : state.annee?.id;
+  const matieres = MATIERES[key] || MATIERES[state.annee?.id] || [];
+  const grid = document.getElementById('optMatiere');
+  grid.innerHTML = '';
+  matieres.forEach(m => {
+    const btn = document.createElement('button');
+    btn.className = 'opt-btn';
+    btn.textContent = m;
+    btn.onclick = () => { state.matiere = m; highlightOpt('optMatiere', m); showLecon(m); checkCanStart(); };
+    grid.appendChild(btn);
+  });
+  document.getElementById('grpMatiere').classList.remove('hidden');
+  document.getElementById('grpLecon').classList.add('hidden');
+  document.getElementById('grpDiff').classList.add('hidden');
+}
+
+function showLecon(matiere) {
+  const filKey = state.filiere ? `${matiere}_${state.annee.id}_${state.filiere.id}` : null;
+  const baseKey = `${matiere}_${state.annee?.id}`;
+  const lecons = LECONS[filKey] || LECONS[baseKey] || generateLeconsFallback(matiere, state.annee?.id);
+  const grid = document.getElementById('optLecon');
+  grid.innerHTML = '';
+  lecons.forEach((l,i) => {
+    const btn = document.createElement('button');
+    btn.className = 'opt-btn';
+    btn.textContent = `${i+1}. ${l}`;
+    btn.onclick = () => { state.lecon = l; highlightOpt('optLecon', l); document.getElementById('grpDiff').classList.remove('hidden'); checkCanStart(); };
+    btn.style.cssText = 'font-size:0.8rem;text-align:left;';
+    grid.appendChild(btn);
+  });
+  document.getElementById('grpLecon').classList.remove('hidden');
+  document.getElementById('grpDiff').classList.add('hidden');
+}
+
+function generateLeconsFallback(matiere, annee) {
+  return [`Introduction à ${matiere}`,`Les bases de ${matiere}`,`Concepts fondamentaux`,`Approfondissement`,`Applications pratiques`,`Exercices types`,`Révision générale`];
+}
+
+function selectDiff(fr, ar) {
+  state.diff = fr; state.diffAr = ar;
+  document.querySelectorAll('.opt-btn[class*="diff-"]').forEach(b => b.classList.remove('selected'));
+  event.target.classList.add('selected');
+  checkCanStart();
+}
+
+function highlightOpt(gridId, val) {
+  document.querySelectorAll(`#${gridId} .opt-btn`).forEach(b => {
+    b.classList.toggle('selected', b.textContent.includes(val) || b.dataset.id === val);
+  });
+}
+
+function updateSteps() {
+  const s = [!!state.annee, !!state.filiere || !state.annee?.lycee, !!state.matiere, !!state.lecon, !!state.diff];
+  document.querySelectorAll('.step').forEach((el,i) => {
+    el.classList.toggle('active', i === s.filter(Boolean).length);
+    el.classList.toggle('done', i < s.filter(Boolean).length);
+  });
+}
+
+function checkCanStart() {
+  updateSteps();
+  const needFiliere = state.annee?.lycee;
+  const ready = state.annee && (!needFiliere || state.filiere) && state.matiere && state.lecon && state.diff;
+  document.getElementById('btnStart').disabled = !ready;
+}
+
+// ══════════════════════════════════════════
+// QUIZ GENERATION
+// ══════════════════════════════════════════
+async function startQuiz() {
+  document.getElementById('setupCard').style.display = 'none';
+  document.getElementById('loadingOverlay').classList.add('show');
+
+  const prompt = buildPrompt();
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: `Tu es un professeur expert du programme scolaire algérien. Tu génères des quiz pédagogiques de haute qualité.
+Réponds UNIQUEMENT en JSON valide, sans balises markdown, sans texte avant ou après.
+Format exact:
+{"questions":[{"question":"...","options":["A...","B...","C...","D..."],"correct":0,"explanation":"..."}]}
+- correct est l'index (0-3) de la bonne réponse
+- Les questions doivent être en français (ou en arabe si la matière est Arabe/Éducation Islamique)
+- L'explication doit suivre la méthodologie algérienne officielle
+- Ne génère PAS de quiz pour Math et Physique (trop complexes pour format QCM)`,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const data = await res.json();
+    const text = data.content?.map(i => i.text || '').join('') || '';
+    const clean = text.replace(/```json|```/g,'').trim();
+    const parsed = JSON.parse(clean);
+    if (parsed.questions && parsed.questions.length > 0) {
+      quizData.questions = parsed.questions;
+      quizData.current = 0; quizData.score = 0;
+      document.getElementById('loadingOverlay').classList.remove('show');
+      document.getElementById('quizArea').classList.add('active');
+      renderQuestion();
+    } else throw new Error('No questions');
+  } catch(e) {
+    console.error(e);
+    useFallbackQuiz();
+  }
+}
+
+function buildPrompt() {
+  const lyceeInfo = state.filiere ? ` - Filière: ${state.filiere.label}` : '';
+  return `Génère un quiz de 8 questions de niveau "${state.diff}" sur:
+- Année: ${state.annee.label}${lyceeInfo}
+- Matière: ${state.matiere}
+- Leçon: ${state.lecon}
+
+Programme scolaire algérien officiel. Questions précises, claires, pédagogiques.
+Difficulté ${state.diff}: ${state.diff==='Facile'?'questions de base, compréhension simple':state.diff==='Normale'?'questions standard, analyse modérée':'questions avancées, analyse approfondie, cas complexes'}`;
+}
+
+function useFallbackQuiz() {
+  quizData.questions = [
+    {question:`Quel est le sujet principal de la leçon "${state.lecon}" en ${state.matiere}?`,options:['Option A','Option B','Option C','Option D'],correct:0,explanation:`Cette leçon fait partie du programme de ${state.annee.label} selon le curriculum algérien.`},
+    {question:`En ${state.matiere}, comment définit-on le concept central de "${state.lecon}"?`,options:['Définition A','Définition B','Définition C','Définition D'],correct:1,explanation:`Selon la méthodologie du programme algérien, ce concept est fondamental.`},
+  ];
+  quizData.current = 0; quizData.score = 0;
+  document.getElementById('loadingOverlay').classList.remove('show');
+  document.getElementById('quizArea').classList.add('active');
+  renderQuestion();
+}
+
+// ══════════════════════════════════════════
+// RENDER QUESTION
+// ══════════════════════════════════════════
+function renderQuestion() {
+  const q = quizData.questions[quizData.current];
+  const total = quizData.questions.length;
+  const pct = (quizData.current / total) * 100;
+
+  document.getElementById('quizInfo').textContent = `Question ${quizData.current+1}/${total}`;
+  document.getElementById('quizScore').textContent = `Score: ${quizData.score}/${total}`;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('btnNext').classList.remove('show');
+
+  const letters = ['A','B','C','D'];
+  const html = `
+    <div class="question-card">
+      <div class="q-num">QUESTION ${quizData.current+1} · السؤال ${toArabicNum(quizData.current+1)}</div>
+      <div class="q-text">${q.question}</div>
+      <div class="answers-grid">
+        ${q.options.map((opt,i) => `
+          <button class="ans-btn" onclick="selectAnswer(${i})" id="ans_${i}">
+            <span class="ans-letter">${letters[i]}</span>
+            ${opt}
+          </button>
+        `).join('')}
+      </div>
+      <div class="explanation-box" id="explanationBox">
+        <div class="expl-title">💡 EXPLICATION · الشرح</div>
+        <div class="expl-text">${q.explanation || ''}</div>
+      </div>
+    </div>
+  `;
+  document.getElementById('questionContainer').innerHTML = html;
+}
+
+function toArabicNum(n) {
+  return n.toString().replace(/\d/g, d => '٠١٢٣٤٥٦٧٨٩'[d]);
+}
+
+function selectAnswer(idx) {
+  const q = quizData.questions[quizData.current];
+  document.querySelectorAll('.ans-btn').forEach(b => b.disabled = true);
+  document.getElementById(`ans_${idx}`).classList.add(idx === q.correct ? 'correct' : 'wrong');
+  if (idx !== q.correct) document.getElementById(`ans_${q.correct}`).classList.add('correct');
+  if (idx === q.correct) quizData.score++;
+  document.getElementById('quizScore').textContent = `Score: ${quizData.score}/${quizData.questions.length}`;
+  document.getElementById('explanationBox').classList.add('show');
+  document.getElementById('btnNext').classList.add('show');
+  if (quizData.current === quizData.questions.length - 1) {
+    document.getElementById('btnNext').textContent = 'Voir les résultats · النتائج 🏆';
+  }
+}
+
+function nextQuestion() {
+  quizData.current++;
+  if (quizData.current >= quizData.questions.length) {
+    showResults();
+  } else {
+    renderQuestion();
+  }
+}
+
+// ══════════════════════════════════════════
+// RESULTS
+// ══════════════════════════════════════════
+async function showResults() {
+  document.getElementById('quizArea').classList.remove('active');
+  const total = quizData.questions.length;
+  const score = quizData.score;
+  const pct = Math.round((score/total)*100);
+  const rc = document.getElementById('resultsCard');
+  rc.classList.add('show');
+
+  let emoji = '🏆', msgFr = '', msgAr = '';
+  if (pct >= 80) { emoji = '🏆'; msgFr = `Excellent ! Tu as obtenu ${pct}% ! Continue comme ça !`; msgAr = `ممتاز! حصلت على ${pct}٪! استمر هكذا!`; }
+  else if (pct >= 60) { emoji = '👍'; msgFr = `Bien joué ! ${pct}% — encore un effort !`; msgAr = `أحسنت! ${pct}٪ — اجتهد أكثر!`; }
+  else { emoji = '💪'; msgFr = `${pct}% — Ne te décourage pas ! La révision paie toujours.`; msgAr = `${pct}٪ — لا تستسلم! المراجعة ستنفع دائماً.`; }
+
+  document.getElementById('resultEmoji').textContent = emoji;
+  document.getElementById('resultScore').textContent = `${score}/${total}`;
+  document.getElementById('resultMsg').textContent = msgFr;
+  document.getElementById('resultMsgAr').textContent = msgAr;
+
+  // Save score
+  const token = localStorage.getItem('token');
+  if (token) {
+    try {
+      await fetch('http://localhost:5000/api/quiz/submit', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json','Authorization':'Bearer '+token },
+        body: JSON.stringify({ score, total, matiere: state.matiere, lecon: state.lecon, annee: state.annee?.id, points: score * 10 })
+      });
+    } catch {}
+  }
+}
+
+function resetQuiz() {
+  state = { annee:null, filiere:null, matiere:null, lecon:null, diff:null };
+  quizData = { questions:[], current:0, score:0 };
+  document.getElementById('resultsCard').classList.remove('show');
+  document.getElementById('quizArea').classList.remove('active');
+  document.getElementById('setupCard').style.display = '';
+  document.getElementById('grpFiliere').classList.add('hidden');
+  document.getElementById('grpMatiere').classList.add('hidden');
+  document.getElementById('grpLecon').classList.add('hidden');
+  document.getElementById('grpDiff').classList.add('hidden');
+  document.querySelectorAll('.opt-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('btnStart').disabled = true;
+  init();
+}
+
+// Boot
+document.getElementById('optAnnee').innerHTML = '';
+init();
+</script>
+</body>
+</html>
