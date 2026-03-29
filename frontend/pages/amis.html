@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>EDUMIND IA — Mes Amis</title>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;800&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+  <style>
+    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+    :root{--emerald:#00c9a7;--navy:#0a0e1a;--navy-light:#1a2340;--gold:#f5c842;--white:#f0f4ff;--muted:#8896b3;--purple:#a78bfa;--coral:#fb923c;--red:#f87171}
+    body{font-family:'Syne','Tajawal',sans-serif;background:var(--navy);color:var(--white);min-height:100vh}
+    .bg-canvas{position:fixed;inset:0;z-index:0;background:radial-gradient(ellipse 60% 50% at 20% 30%,rgba(167,139,250,.08) 0%,transparent 60%),var(--navy)}
+    nav{position:sticky;top:0;z-index:100;padding:1rem 2rem;background:rgba(10,14,26,.8);backdrop-filter:blur(20px);border-bottom:1px solid rgba(167,139,250,.1);display:flex;align-items:center;gap:1rem}
+    .back-btn{color:var(--muted);text-decoration:none;font-size:.85rem;transition:color .2s}.back-btn:hover{color:var(--purple)}
+    .nav-title{font-size:1.1rem;font-weight:800;color:var(--purple)}
+    .notif-badge{background:var(--coral);color:white;font-size:.65rem;font-weight:800;padding:.15rem .45rem;border-radius:100px;margin-left:.3rem;display:none}
+
+    main{position:relative;z-index:1;max-width:900px;margin:0 auto;padding:2rem 1.5rem}
+
+    /* HEADER */
+    .page-header{text-align:center;margin-bottom:2.5rem}
+    .page-title{font-size:clamp(1.8rem,5vw,3rem);font-weight:800}
+    .page-title-ar{font-family:'Tajawal';direction:rtl;font-size:1.3rem;color:var(--muted);margin-bottom:.5rem}
+
+    /* TOGGLE VISIBILITY */
+    .visibility-bar{display:flex;align-items:center;gap:1rem;background:rgba(26,35,64,.5);border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:1rem 1.5rem;margin-bottom:2rem}
+    .toggle{position:relative;width:44px;height:24px;cursor:pointer;background:rgba(255,255,255,.1);border:none;border-radius:100px;transition:background .3s;flex-shrink:0}
+    .toggle.on{background:var(--emerald)}
+    .toggle::after{content:'';position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:white;transition:transform .3s}
+    .toggle.on::after{transform:translateX(20px)}
+    .vis-label{font-size:.85rem;color:var(--muted);flex:1}
+    .vis-label-ar{font-family:'Tajawal';direction:rtl;font-size:.9rem;color:var(--muted)}
+
+    /* TABS */
+    .tabs{display:flex;gap:.5rem;margin-bottom:2rem;background:rgba(26,35,64,.5);border-radius:14px;padding:.4rem}
+    .tab{flex:1;padding:.7rem;border:none;border-radius:10px;cursor:pointer;font-family:'Syne';font-size:.85rem;font-weight:600;color:var(--muted);background:none;transition:all .25s;position:relative}
+    .tab.active{background:rgba(167,139,250,.15);color:var(--purple)}
+    .tab-badge{position:absolute;top:6px;right:10px;background:var(--coral);color:white;font-size:.6rem;font-weight:800;padding:.1rem .4rem;border-radius:100px;display:none}
+
+    /* CARD */
+    .card{background:rgba(26,35,64,.7);border:1px solid rgba(255,255,255,.07);border-radius:20px;padding:1.5rem;backdrop-filter:blur(12px);margin-bottom:1.5rem}
+    .card-title{font-size:.7rem;letter-spacing:2px;font-weight:700;text-transform:uppercase;margin-bottom:1rem;color:var(--purple)}
+
+    /* SEARCH */
+    .search-wrap{display:flex;gap:.8rem;margin-bottom:1.2rem}
+    .search-input{flex:1;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.08);border-radius:12px;padding:.8rem 1.1rem;color:var(--white);font-family:'Syne';font-size:.9rem;outline:none;transition:all .3s}
+    .search-input:focus{border-color:var(--purple);background:rgba(167,139,250,.04)}
+    .search-input::placeholder{color:rgba(136,150,179,.5)}
+    .search-btn{padding:.8rem 1.5rem;background:linear-gradient(135deg,var(--purple),#7c5fe6);border:none;border-radius:12px;color:white;cursor:pointer;font-family:'Syne';font-size:.85rem;font-weight:700;transition:all .25s}
+    .search-btn:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(167,139,250,.3)}
+
+    /* SEARCH RESULTS */
+    .search-results{display:flex;flex-direction:column;gap:.6rem}
+    .user-result{display:flex;align-items:center;gap:.8rem;padding:.9rem 1rem;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:12px;transition:all .25s}
+    .user-result:hover{border-color:rgba(167,139,250,.2);background:rgba(167,139,250,.04)}
+    .u-avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--purple),var(--emerald));display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0}
+    .u-name{font-size:.9rem;font-weight:700;flex:1}
+    .u-action-btn{padding:.4rem 1rem;border-radius:8px;font-family:'Syne';font-size:.78rem;font-weight:700;cursor:pointer;border:none;transition:all .2s}
+    .btn-add{background:rgba(0,201,167,.15);color:var(--emerald);border:1px solid rgba(0,201,167,.3)}
+    .btn-add:hover{background:rgba(0,201,167,.25)}
+    .btn-sent{background:rgba(255,255,255,.05);color:var(--muted);border:1px solid rgba(255,255,255,.08);cursor:default}
+    .btn-friend{background:rgba(167,139,250,.1);color:var(--purple);border:1px solid rgba(167,139,250,.2);cursor:default}
+
+    /* REQUESTS */
+    .request-item{display:flex;align-items:center;gap:.8rem;padding:1rem;background:rgba(251,146,60,.06);border:1px solid rgba(251,146,60,.2);border-radius:14px;margin-bottom:.8rem}
+    .r-avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--coral),var(--gold));display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0}
+    .r-info{flex:1}
+    .r-name{font-size:.95rem;font-weight:700}
+    .r-sub{font-size:.75rem;color:var(--muted);margin-top:.1rem}
+    .r-actions{display:flex;gap:.5rem}
+    .btn-accept{padding:.4rem 1rem;background:rgba(0,201,167,.15);color:var(--emerald);border:1px solid rgba(0,201,167,.3);border-radius:8px;font-family:'Syne';font-size:.8rem;font-weight:700;cursor:pointer;transition:all .2s}
+    .btn-accept:hover{background:rgba(0,201,167,.25)}
+    .btn-decline{padding:.4rem 1rem;background:rgba(248,113,113,.1);color:var(--red);border:1px solid rgba(248,113,113,.25);border-radius:8px;font-family:'Syne';font-size:.8rem;font-weight:700;cursor:pointer;transition:all .2s}
+    .btn-decline:hover{background:rgba(248,113,113,.2)}
+
+    /* FRIENDS LIST */
+    .friend-item{display:flex;align-items:center;gap:.8rem;padding:1rem;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:14px;margin-bottom:.8rem;transition:all .25s}
+    .friend-item:hover{border-color:rgba(167,139,250,.2)}
+    .f-avatar{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--purple),var(--emerald));display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0}
+    .f-info{flex:1}
+    .f-name{font-size:.95rem;font-weight:700}
+    .f-pts{font-size:.8rem;color:var(--gold);margin-top:.1rem}
+    .f-rank{font-size:.75rem;color:var(--muted)}
+    .btn-remove{padding:.3rem .7rem;background:rgba(248,113,113,.08);color:var(--red);border:1px solid rgba(248,113,113,.2);border-radius:8px;font-size:.72rem;cursor:pointer;font-family:'Syne';transition:all .2s}
+    .btn-remove:hover{background:rgba(248,113,113,.18)}
+
+    /* TOP FRIEND */
+    .top-friend-card{background:linear-gradient(135deg,rgba(245,200,66,.08),rgba(251,146,60,.06));border:1px solid rgba(245,200,66,.2);border-radius:16px;padding:1.2rem;display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem}
+    .top-avatar{width:50px;height:50px;border-radius:50%;background:linear-gradient(135deg,var(--gold),var(--coral));display:flex;align-items:center;justify-content:center;font-size:1.4rem}
+    .top-info .top-label{font-size:.65rem;letter-spacing:2px;color:var(--gold);font-weight:700;margin-bottom:.2rem}
+    .top-info .top-name{font-size:1rem;font-weight:800}
+    .top-info .top-pts{font-size:.8rem;color:var(--gold)}
+
+    /* COMPARE */
+    .matiere-btns{display:flex;flex-wrap:wrap;gap:.5rem;margin:1rem 0}
+    .mat-btn{padding:.4rem .9rem;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;color:var(--muted);cursor:pointer;font-size:.78rem;font-family:'Syne';transition:all .2s}
+    .mat-btn.active{background:rgba(167,139,250,.15);border-color:var(--purple);color:var(--purple)}
+    .compare-chart-wrap{height:200px}
+
+    /* EMPTY STATE */
+    .empty-state{text-align:center;padding:2.5rem;color:var(--muted)}
+    .empty-icon{font-size:3rem;margin-bottom:1rem}
+    .empty-text{font-size:.9rem}
+    .empty-ar{font-family:'Tajawal';direction:rtl;font-size:.95rem;margin-top:.3rem}
+
+    /* TOAST */
+    .toast{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%) translateY(100px);background:rgba(26,35,64,.95);border:1px solid rgba(0,201,167,.3);border-radius:12px;padding:.8rem 1.5rem;font-size:.85rem;font-weight:600;color:var(--emerald);z-index:999;transition:transform .3s;backdrop-filter:blur(16px)}
+    .toast.show{transform:translateX(-50%) translateY(0)}
+    .toast.error{border-color:rgba(248,113,113,.3);color:var(--red)}
+
+    .hidden{display:none!important}
+    @media(max-width:600px){.tabs{flex-direction:column}.search-wrap{flex-direction:column}}
+  </style>
+</head>
+<body>
+<div class="bg-canvas"></div>
+<nav>
+  <a href="dashboard.html" class="back-btn">← Accueil · الرئيسية</a>
+  <div class="nav-title">👥 Mes Amis · أصدقائي</div>
+  <span class="notif-badge" id="navBadge">0</span>
+</nav>
+
+<main>
+  <div class="page-header">
+    <div class="page-title-ar">أصدقائي والمقارنة</div>
+    <div class="page-title">👥 Mes Amis</div>
+  </div>
+
+  <!-- TOGGLE VISIBILITÉ -->
+  <div class="visibility-bar">
+    <button class="toggle on" id="visToggle" onclick="toggleVisibility()"></button>
+    <span class="vis-label">Apparaître dans les comparatifs de mes amis</span>
+    <span class="vis-label-ar">الظهور في مقارنات أصدقائي</span>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('search')">🔍 Rechercher</button>
+    <button class="tab" id="tabRequests" onclick="switchTab('requests')">
+      📩 Demandes<span class="tab-badge" id="reqBadge">0</span>
+    </button>
+    <button class="tab" onclick="switchTab('friends')">👥 Mes amis</button>
+    <button class="tab" onclick="switchTab('compare')">📊 Comparatif</button>
+  </div>
+
+  <!-- TAB: RECHERCHE -->
+  <div id="tabSearch">
+    <div class="card">
+      <div class="card-title">Trouver un ami · ابحث عن صديق</div>
+      <div class="search-wrap">
+        <input type="text" class="search-input" id="searchInput" placeholder="Prénom ou nom · الاسم أو اللقب..." onkeydown="if(event.key==='Enter')searchUser()"/>
+        <button class="search-btn" onclick="searchUser()">Rechercher</button>
+      </div>
+      <div class="search-results" id="searchResults"></div>
+    </div>
+  </div>
+
+  <!-- TAB: DEMANDES -->
+  <div id="tabRequests" class="hidden">
+    <div class="card">
+      <div class="card-title">Demandes reçues · الطلبات الواردة</div>
+      <div id="requestsList">
+        <div class="empty-state">
+          <div class="empty-icon">📭</div>
+          <div class="empty-text">Aucune demande en attente</div>
+          <div class="empty-ar">لا توجد طلبات في الانتظار</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: MES AMIS -->
+  <div id="tabFriends" class="hidden">
+    <div id="friendsList">
+      <div class="card">
+        <div class="empty-state">
+          <div class="empty-icon">👫</div>
+          <div class="empty-text">Tu n'as pas encore d'amis — recherche des camarades !</div>
+          <div class="empty-ar">ليس لديك أصدقاء بعد — ابحث عن زملائك!</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: COMPARATIF -->
+  <div id="tabCompare" class="hidden">
+    <div id="compareContent">
+      <div class="card">
+        <div class="empty-state">
+          <div class="empty-icon">📊</div>
+          <div class="empty-text">Ajoute des amis pour voir le comparatif !</div>
+          <div class="empty-ar">أضف أصدقاء لرؤية المقارنة!</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = 'https://edumind-api.onrender.com';
+const token = localStorage.getItem('token');
+let friendsData = [];
+let compareChartObj = null;
+let visibleCompare = true;
+let activeMatiere = null;
+
+// ── INIT ──
+async function init() {
+  await loadRequests();
+  await loadFriends();
+}
+
+// ── TOAST ──
+function showToast(msg, isError=false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (isError?' error':'');
+  setTimeout(() => t.className = 'toast', 3000);
+}
+
+// ── TABS ──
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  const tabMap = {search:'tabSearch',requests:'tabRequests',friends:'tabFriends',compare:'tabCompare'};
+  Object.values(tabMap).forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.add('hidden');
+  });
+  document.getElementById(tabMap[name]).classList.remove('hidden');
+  event.target.classList.add('active');
+}
+
+// ── VISIBILITY ──
+async function toggleVisibility() {
+  visibleCompare = !visibleCompare;
+  const btn = document.getElementById('visToggle');
+  btn.classList.toggle('on', visibleCompare);
+  try {
+    await fetch(`${API}/api/friends/visibility`, {
+      method:'PATCH', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body: JSON.stringify({ visible: visibleCompare })
+    });
+    showToast(visibleCompare ? '✅ Tu apparais dans les comparatifs' : '🙈 Tu es masqué des comparatifs');
+  } catch { showToast('Erreur réseau', true); }
+}
+
+// ── SEARCH ──
+async function searchUser() {
+  const q = document.getElementById('searchInput').value.trim();
+  if (q.length < 2) return showToast('Écris au moins 2 lettres · اكتب حرفين على الأقل', true);
+  const res = document.getElementById('searchResults');
+  res.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:.5rem">Recherche en cours...</div>';
+  try {
+    const r = await fetch(`${API}/api/users/search?q=${encodeURIComponent(q)}`, { headers:{'Authorization':'Bearer '+token} });
+    const users = await r.json();
+    if (!users.length) { res.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:.5rem">Aucun résultat · لا نتائج</div>'; return; }
+    res.innerHTML = users.map(u => `
+      <div class="user-result">
+        <div class="u-avatar">👤</div>
+        <div class="u-name">${u.firstName} ${u.lastName}</div>
+        ${u.isFriend
+          ? `<button class="u-action-btn btn-friend" disabled>✅ Ami</button>`
+          : u.requestSent
+            ? `<button class="u-action-btn btn-sent" disabled>⏳ Envoyée</button>`
+            : `<button class="u-action-btn btn-add" onclick="sendRequest('${u.id}','${u.firstName} ${u.lastName}',this)">+ Ajouter</button>`
+        }
+      </div>`).join('');
+  } catch { res.innerHTML = '<div style="color:var(--red);font-size:.85rem;">Erreur réseau</div>'; }
+}
+
+async function sendRequest(userId, name, btn) {
+  btn.disabled = true; btn.textContent = '...';
+  try {
+    const r = await fetch(`${API}/api/friends/request`, {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body: JSON.stringify({ toUserId: userId })
+    });
+    const data = await r.json();
+    if (r.ok) { btn.className = 'u-action-btn btn-sent'; btn.textContent = '⏳ Envoyée'; showToast(`✅ ${data.message}`); }
+    else { btn.disabled = false; btn.textContent = '+ Ajouter'; showToast(data.message, true); }
+  } catch { btn.disabled = false; btn.textContent = '+ Ajouter'; showToast('Erreur réseau', true); }
+}
+
+// ── REQUESTS ──
+async function loadRequests() {
+  try {
+    const r = await fetch(`${API}/api/friends/requests`, { headers:{'Authorization':'Bearer '+token} });
+    const requests = await r.json();
+    const badge = document.getElementById('reqBadge');
+    const navBadge = document.getElementById('navBadge');
+    if (requests.length > 0) {
+      badge.style.display = 'inline'; badge.textContent = requests.length;
+      navBadge.style.display = 'inline'; navBadge.textContent = requests.length;
+    }
+    const list = document.getElementById('requestsList');
+    if (!requests.length) {
+      list.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">Aucune demande en attente</div><div class="empty-ar">لا توجد طلبات في الانتظار</div></div>';
+      return;
+    }
+    list.innerHTML = requests.map(req => `
+      <div class="request-item" id="req_${req._id}">
+        <div class="r-avatar">👤</div>
+        <div class="r-info">
+          <div class="r-name">${req.from.firstName} ${req.from.lastName}</div>
+          <div class="r-sub">veut être ton ami · يريد مصادقتك</div>
+        </div>
+        <div class="r-actions">
+          <button class="btn-accept" onclick="acceptRequest('${req._id}')">✅ Accepter</button>
+          <button class="btn-decline" onclick="declineRequest('${req._id}')">❌ Refuser</button>
+        </div>
+      </div>`).join('');
+  } catch {}
+}
+
+async function acceptRequest(reqId) {
+  try {
+    const r = await fetch(`${API}/api/friends/accept`, {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body: JSON.stringify({ requestId: reqId })
+    });
+    const data = await r.json();
+    if (r.ok) {
+      document.getElementById(`req_${reqId}`)?.remove();
+      showToast('✅ ' + data.message);
+      await loadFriends();
+      await loadRequests();
+    } else showToast(data.message, true);
+  } catch { showToast('Erreur réseau', true); }
+}
+
+async function declineRequest(reqId) {
+  try {
+    const r = await fetch(`${API}/api/friends/decline`, {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body: JSON.stringify({ requestId: reqId })
+    });
+    if (r.ok) { document.getElementById(`req_${reqId}`)?.remove(); showToast('Demande refusée'); await loadRequests(); }
+  } catch { showToast('Erreur réseau', true); }
+}
+
+// ── FRIENDS LIST ──
+async function loadFriends() {
+  try {
+    const r = await fetch(`${API}/api/friends`, { headers:{'Authorization':'Bearer '+token} });
+    friendsData = await r.json();
+    renderFriendsList();
+    renderCompare();
+  } catch {}
+}
+
+function renderFriendsList() {
+  const list = document.getElementById('friendsList');
+  if (!friendsData.length) {
+    list.innerHTML = '<div class="card"><div class="empty-state"><div class="empty-icon">👫</div><div class="empty-text">Tu n\'as pas encore d\'amis — recherche des camarades !</div><div class="empty-ar">ليس لديك أصدقاء بعد — ابحث عن زملائك!</div></div></div>';
+    return;
+  }
+  const sorted = [...friendsData].sort((a,b)=>b.totalPoints-a.totalPoints);
+  list.innerHTML = sorted.map((f,i) => `
+    <div class="friend-item">
+      <div class="f-avatar">${i===0?'🥇':i===1?'🥈':i===2?'🥉':'👤'}</div>
+      <div class="f-info">
+        <div class="f-name">${f.name}</div>
+        <div class="f-pts">${f.totalPoints} points</div>
+        <div class="f-rank">${i===0?'🏆 1er de tes amis':i===1?'🥈 2ème':i===2?'🥉 3ème':`#${i+1}`}</div>
+      </div>
+      <button class="btn-remove" onclick="removeFriend('${f.id}','${f.name}')">Retirer</button>
+    </div>`).join('');
+}
+
+async function removeFriend(friendId, name) {
+  if (!confirm(`Retirer ${name} de tes amis ?`)) return;
+  try {
+    const r = await fetch(`${API}/api/friends/${friendId}`, { method:'DELETE', headers:{'Authorization':'Bearer '+token} });
+    if (r.ok) { showToast('Ami retiré'); await loadFriends(); }
+  } catch { showToast('Erreur réseau', true); }
+}
+
+// ── COMPARE ──
+function renderCompare() {
+  const container = document.getElementById('compareContent');
+  if (!friendsData.length) {
+    container.innerHTML = '<div class="card"><div class="empty-state"><div class="empty-icon">📊</div><div class="empty-text">Ajoute des amis pour voir le comparatif !</div><div class="empty-ar">أضف أصدقاء لرؤية المقارنة!</div></div></div>';
+    return;
+  }
+
+  // Top friend
+  const top = [...friendsData].sort((a,b)=>b.totalPoints-a.totalPoints)[0];
+
+  // All matieres across all friends + me
+  const allMatieres = new Set();
+  friendsData.forEach(f => Object.keys(f.byMatiere).forEach(m => allMatieres.add(m)));
+
+  // Get my stats for compare
+  const myMatieres = {};
+
+  if (!activeMatiere && allMatieres.size > 0) activeMatiere = [...allMatieres][0];
+
+  container.innerHTML = `
+    <div class="top-friend-card">
+      <div class="top-avatar">🥇</div>
+      <div class="top-info">
+        <div class="top-label">MEILLEUR AMI · أفضل صديق</div>
+        <div class="top-name">${top.name}</div>
+        <div class="top-pts">${top.totalPoints} points au total</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Comparer par matière · قارن حسب المادة</div>
+      <div class="matiere-btns" id="matiereBtns">
+        ${[...allMatieres].map(m => `<button class="mat-btn ${m===activeMatiere?'active':''}" onclick="selectMatiere('${m}')">${m}</button>`).join('')}
+        <button class="mat-btn ${activeMatiere==='TOTAL'?'active':''}" onclick="selectMatiere('TOTAL')">🏆 Total</button>
+      </div>
+      <div class="compare-chart-wrap"><canvas id="compareChart"></canvas></div>
+    </div>`;
+
+  drawCompareChart();
+}
+
+function selectMatiere(mat) {
+  activeMatiere = mat;
+  document.querySelectorAll('.mat-btn').forEach(b => b.classList.toggle('active', b.textContent===mat || (mat==='TOTAL' && b.textContent==='🏆 Total')));
+  drawCompareChart();
+}
+
+function drawCompareChart() {
+  const ctx = document.getElementById('compareChart');
+  if (!ctx) return;
+  if (compareChartObj) { compareChartObj.destroy(); compareChartObj = null; }
+
+  const labels = friendsData.map(f => f.firstName);
+  const data = friendsData.map(f => activeMatiere==='TOTAL' ? f.totalPoints : (f.byMatiere[activeMatiere]||0));
+  const colors = ['rgba(167,139,250,.7)','rgba(245,200,66,.7)','rgba(251,146,60,.7)','rgba(96,165,250,.7)','rgba(52,211,153,.7)'];
+
+  compareChartObj = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: activeMatiere==='TOTAL'?'Points totaux':activeMatiere,
+        data,
+        backgroundColor: labels.map((_,i)=>colors[i%colors.length]),
+        borderRadius: 8, borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid:{color:'rgba(255,255,255,.04)'}, ticks:{color:'#8896b3'} },
+        y: { grid:{color:'rgba(255,255,255,.04)'}, ticks:{color:'#8896b3'}, beginAtZero:true }
+      }
+    }
+  });
+}
+
+init();
+</script>
+</body>
+</html>
