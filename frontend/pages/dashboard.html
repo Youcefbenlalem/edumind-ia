@@ -129,11 +129,14 @@
     .card-quiz::before { background: linear-gradient(135deg, rgba(0,201,167,0.08), transparent); }
     .card-user::before { background: linear-gradient(135deg, rgba(167,139,250,0.1), transparent); }
     .card-ia::before { background: linear-gradient(135deg, rgba(251,146,60,0.08), transparent); }
+    .card-amis::before { background: linear-gradient(135deg, rgba(167,139,250,0.1), transparent); }
 
     .main-card:hover { transform: translateY(-8px); }
     .card-quiz:hover { border-color: rgba(0,201,167,0.3); box-shadow: 0 20px 60px rgba(0,201,167,0.15); }
     .card-user:hover { border-color: rgba(167,139,250,0.3); box-shadow: 0 20px 60px rgba(167,139,250,0.15); }
     .card-ia:hover { border-color: rgba(251,146,60,0.3); box-shadow: 0 20px 60px rgba(251,146,60,0.15); }
+    .card-amis:hover { border-color: rgba(167,139,250,0.3); box-shadow: 0 20px 60px rgba(167,139,250,0.15); }
+    .main-card:nth-child(4) { animation-delay: 0.4s; }
 
     .main-card:hover::before { opacity: 1; }
 
@@ -288,6 +291,24 @@
         </div>
       </a>
 
+      <!-- AMIS -->
+      <a href="amis.html" class="main-card card-amis">
+        <div class="card-glow" style="background:var(--purple)"></div>
+        <span class="card-emoji">👥</span>
+        <div class="card-accent" style="background:rgba(167,139,250,0.15);color:var(--purple)">Amis · الأصدقاء</div>
+        <div class="card-title-fr">Mes Amis</div>
+        <div class="card-title-ar">أصدقائي</div>
+        <p class="card-desc">Ajoute tes camarades, accepte leurs demandes et compare vos scores par matière en temps réel.</p>
+        <p class="card-desc-ar">أضف زملاءك وقارن نقاطك معهم في كل مادة بشكل فوري</p>
+        <div class="card-cta">
+          <div>
+            <div class="cta-text" style="color:var(--purple)">MES AMIS</div>
+            <div class="cta-ar">أصدقائي</div>
+          </div>
+          <span class="cta-arrow">→</span>
+        </div>
+      </a>
+
     </div>
   </main>
 
@@ -302,7 +323,7 @@
       const token = localStorage.getItem('token');
       if (!token) return;
       try {
-        const res = await fetch('http://localhost:5000/api/stats', {
+        const res = await fetch('https://edumind-api.onrender.com/api/stats', {
           headers: { 'Authorization': 'Bearer ' + token }
         });
         if (res.ok) {
