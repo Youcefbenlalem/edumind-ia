@@ -136,16 +136,16 @@
 
   <!-- TABS -->
   <div class="tabs">
-    <button class="tab active" onclick="switchTab('search')">🔍 Rechercher</button>
-    <button class="tab" id="tabRequests" onclick="switchTab('requests')">
+    <button class="tab active" id="btn-search" onclick="switchTab('search',this)">🔍 Rechercher</button>
+    <button class="tab" id="btn-requests" onclick="switchTab('requests',this)">
       📩 Demandes<span class="tab-badge" id="reqBadge">0</span>
     </button>
-    <button class="tab" onclick="switchTab('friends')">👥 Mes amis</button>
-    <button class="tab" onclick="switchTab('compare')">📊 Comparatif</button>
+    <button class="tab" id="btn-friends" onclick="switchTab('friends',this)">👥 Mes amis</button>
+    <button class="tab" id="btn-compare" onclick="switchTab('compare',this)">📊 Comparatif</button>
   </div>
 
   <!-- TAB: RECHERCHE -->
-  <div id="tabSearch">
+  <div id="content-search">
     <div class="card">
       <div class="card-title">Trouver un ami · ابحث عن صديق</div>
       <div class="search-wrap">
@@ -157,7 +157,7 @@
   </div>
 
   <!-- TAB: DEMANDES -->
-  <div id="tabRequests" class="hidden">
+  <div id="content-requests" class="hidden">
     <div class="card">
       <div class="card-title">Demandes reçues · الطلبات الواردة</div>
       <div id="requestsList">
@@ -171,7 +171,7 @@
   </div>
 
   <!-- TAB: MES AMIS -->
-  <div id="tabFriends" class="hidden">
+  <div id="content-friends" class="hidden">
     <div id="friendsList">
       <div class="card">
         <div class="empty-state">
@@ -184,7 +184,7 @@
   </div>
 
   <!-- TAB: COMPARATIF -->
-  <div id="tabCompare" class="hidden">
+  <div id="content-compare" class="hidden">
     <div id="compareContent">
       <div class="card">
         <div class="empty-state">
@@ -222,15 +222,16 @@ function showToast(msg, isError=false) {
 }
 
 // ── TABS ──
-function switchTab(name) {
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  const tabMap = {search:'tabSearch',requests:'tabRequests',friends:'tabFriends',compare:'tabCompare'};
-  Object.values(tabMap).forEach(id => {
+function switchTab(name, btnEl) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  if (btnEl) btnEl.classList.add('active');
+  const contents = ['content-search','content-requests','content-friends','content-compare'];
+  contents.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.add('hidden');
   });
-  document.getElementById(tabMap[name]).classList.remove('hidden');
-  event.target.classList.add('active');
+  const target = document.getElementById('content-' + name);
+  if (target) target.classList.remove('hidden');
 }
 
 // ── VISIBILITY ──
