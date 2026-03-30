@@ -1,11 +1,9 @@
-const { GoogleGenerativeAI } = require("@google/generative-ai");
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 require('dotenv').config();
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 const app = express();
 app.use(cors({ origin: '*' }));
@@ -117,27 +115,33 @@ app.post('/api/quiz/submit', auth, async (req, res) => {
   } catch (err) { res.status(500).json({ message: 'Erreur serveur' }); }
 });
 
-// ── IA PROXY GEMINI ──
-const callGemini = async (system, userMsg) => {
+// ── IA PROXY — GEMINI ──
+const callGemini = async (systemPrompt, userMsg) => {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error('GEMINI_API_KEY manquante');
-
-  const model = genAI.getGenerativeModel({ 
-    model: "gemini-1.5-flash",
-    systemInstruction: system 
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ role: 'user', parts: [{ text: systemPrompt + '\n\n' + userMsg }] }],
+      generationConfig: { temperature: 0.7, maxOutputTokens: 2500 }
+    })
   });
-
-  const result = await model.generateContent(userMsg);
-  const response = await result.response;
-  return response.text();
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error?.message || 'Erreur API Gemini');
+  return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
 };
 
 // IA Chat — réponse pédagogique selon le programme algérien
 app.post('/api/ia/chat', auth, async (req, res) => {
   try {
     const { messages, annee, filiere, matiere } = req.body;
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) return res.status(500).json({ message: 'Clé API Gemini manquante sur le serveur' });
+
     const ctx = [annee&&`Année: ${annee}`, filiere&&`Filière: ${filiere}`, matiere&&`Matière: ${matiere}`].filter(Boolean).join(' | ');
-    const system = `Tu es un professeur expert du programme scolaire algérien officiel (المنهاج الجزائري الرسمي).
+    const systemPrompt = `Tu es un professeur expert du programme scolaire algérien officiel (المنهاج الجزائري الرسمي).
 ${ctx ? 'Contexte élève: ' + ctx : ''}
 RÈGLES:
 1. Réponds selon la méthodologie pédagogique algérienne officielle
@@ -147,47 +151,60 @@ RÈGLES:
 5. Pour math/physique: résous étape par étape avec la méthode algérienne
 6. Sois encourageant comme un bon professeur algérien`;
 
-    // On récupère le dernier message de l'utilisateur pour l'envoyer à Gemini
-    const userMsg = messages[messages.length - 1].content;
-    const reply = await callGemini(system, userMsg);
+    // Reconstituer la conversation pour Gemini (multi-tour)
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    const geminiMessages = messages.map(m => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }]
+    }));
+    // Injecter le system prompt dans le premier message user
+    if (geminiMessages.length > 0 && geminiMessages[0].role === 'user') {
+      geminiMessages[0].parts[0].text = systemPrompt + '\n\n' + geminiMessages[0].parts[0].text;
+    }
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: geminiMessages,
+        generationConfig: { temperature: 0.7, maxOutputTokens: 1500 }
+      })
+    });
+    const data = await response.json();
+    if (!response.ok) return res.status(500).json({ message: data.error?.message || 'Erreur Gemini' });
+    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     res.json({ reply });
-  } catch (err) { 
-    res.status(500).json({ message: err.message }); 
-  }
+  } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
-// Génération de quiz + exercices math/physique via Gemini
+// Génération de quiz + exercices math/physique
 app.post('/api/ia/quiz', auth, async (req, res) => {
   try {
     const { annee, filiere, matiere, lecon, difficulte } = req.body;
     const isMathPhys = ['Mathématiques','Physique-Chimie','Sciences Techniques'].includes(matiere);
     const ctx = `Année: ${annee}${filiere?' - Filière: '+filiere:''} | Matière: ${matiere} | Leçon: ${lecon} | Difficulté: ${difficulte}`;
 
-    const system = `Tu es un professeur expert du programme scolaire algérien. Réponds UNIQUEMENT en JSON valide, sans markdown, sans texte avant ou après.`;
+    const systemPrompt = `Tu es un professeur expert du programme scolaire algérien. Réponds UNIQUEMENT en JSON valide, sans markdown, sans texte avant ou après.`;
 
-    let prompt;
+    let userMsg;
     if (isMathPhys) {
-      prompt = `Génère 4 problèmes/exercices pour: ${ctx}
-
+      userMsg = `Génère 4 problèmes/exercices pour: ${ctx}
 Types d'exercices selon le programme algérien:
 - Mathématiques: calcul, démonstration, problème appliqué, géométrie selon le niveau
 - Physique-Chimie: loi, calcul numérique, expérience, raisonnement
-
 Format JSON exact (rien d'autre):
-{"exercices":[{"numero":1,"titre":"Titre de l'exercice","enonce":"Énoncé complet et clair","donnees":"Données numériques si applicable","questions":["1) Question 1","2) Question 2","3) Question 3"],"correction":"Correction complète étape par étape avec justifications selon méthode algérienne","bareme":5}]}`;
+{"exercices":[{"numero":1,"titre":"Titre","enonce":"Énoncé complet","donnees":"Données si applicable","questions":["1) Q1","2) Q2","3) Q3"],"correction":"Correction étape par étape selon méthode algérienne","bareme":5}]}`;
     } else {
       const isArabe = ['Arabe','Éducation Islamique','Littérature Arabe'].includes(matiere);
-      prompt = `Génère 8 questions QCM pour: ${ctx}
+      userMsg = `Génère 8 questions QCM pour: ${ctx}
 ${isArabe ? 'Questions en arabe obligatoirement.' : 'Questions en français.'}
 Selon le programme officiel algérien.
-
 Format JSON exact (rien d'autre):
-{"questions":[{"question":"Texte de la question ?","options":["A) Option A","B) Option B","C) Option C","D) Option D"],"correct":0,"explication":"Explication selon la méthodologie algérienne"}]}
-
+{"questions":[{"question":"Question ?","options":["A) ...","B) ...","C) ...","D) ..."],"correct":0,"explication":"Explication selon méthode algérienne"}]}
 correct = index 0,1,2 ou 3 de la bonne réponse.`;
     }
 
-    const text = await callGemini(system, prompt);
+    const text = await callGemini(systemPrompt, userMsg);
     const clean = text.replace(/```json|```/g,'').trim();
     const parsed = JSON.parse(clean);
     res.json({ ...parsed, isMathPhys });
