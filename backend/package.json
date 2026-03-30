@@ -1,7 +1,7 @@
 {
   "name": "edumind-backend",
   "version": "1.0.0",
-  "description": "EDUMIND IA Backend - Plateforme éducative algérienne",
+  "description": "EDUMIND IA Backend",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
