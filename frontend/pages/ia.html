@@ -47,7 +47,6 @@
     .sugg-btn:hover{background:rgba(251,146,60,.15)}
     .msg-bubble.ia strong{color:var(--coral)}
     .msg-bubble.ia em{color:var(--gold);font-style:normal;font-weight:600}
-    .no-api-warn{background:rgba(245,200,66,.08);border:1px solid rgba(245,200,66,.25);border-radius:12px;padding:1rem 1.2rem;margin-bottom:1rem;font-size:.83rem;color:var(--gold);display:none}
   </style>
 </head>
 <body>
@@ -78,10 +77,6 @@
       <option>Sciences Techniques</option><option>Économie & Droit</option>
       <option>Comptabilité</option><option>Littérature Arabe</option>
     </select>
-  </div>
-
-  <div class="no-api-warn" id="noApiWarn">
-    ⚠️ Clé API non configurée sur le serveur. Ajoute <strong>ANTHROPIC_API_KEY</strong> dans les variables Render pour activer l'IA.
   </div>
 
   <div class="suggestions" id="suggestions">
@@ -116,6 +111,7 @@
 
 <script>
 const API = 'https://edumind-api.onrender.com';
+
 const FILIERES = {
   '1as':['Scientifique','Lettres & Sciences Humaines'],
   '2as':['Mathématiques','Technique Mathématique','Sciences Expérimentales','Gestion & Économie','Lettres & Sciences Humaines','Langues Étrangères','Philosophie'],
@@ -129,28 +125,32 @@ function updateFilieres() {
   if (FILIERES[annee]) {
     sel.innerHTML = '<option value="">Filière · الشعبة</option>' + FILIERES[annee].map(f=>`<option>${f}</option>`).join('');
     sel.style.display = '';
-  } else { sel.style.display = 'none'; }
+  } else {
+    sel.style.display = 'none';
+  }
 }
 
 let chatHistory = [];
 let isLoading = false;
-function getToken() {
-  const t = localStorage.getItem('token');
-  if (!t) { window.location.href = 'signin.html'; return null; }
-  return t;
-}
-if (!localStorage.getItem('token')) window.location.href = 'signin.html';
 
-function sendSugg(btn) { document.getElementById('msgInput').value = btn.textContent; sendMsg(); }
+function sendSugg(btn) {
+  document.getElementById('msgInput').value = btn.textContent;
+  sendMsg();
+}
 
 async function sendMsg() {
   const input = document.getElementById('msgInput');
   const text = input.value.trim();
   if (!text || isLoading) return;
+
+  // Lire le token à chaque envoi
+  const token = localStorage.getItem('token') || '';
+
   isLoading = true;
   document.getElementById('sendBtn').disabled = true;
   document.getElementById('suggestions').style.display = 'none';
-  input.value = ''; input.style.height = 'auto';
+  input.value = '';
+  input.style.height = 'auto';
 
   addMessage('user', text);
   chatHistory.push({ role: 'user', content: text });
@@ -159,7 +159,10 @@ async function sendMsg() {
   try {
     const res = await fetch(`${API}/api/ia/chat`, {
       method: 'POST',
-      headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+getToken() },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
       body: JSON.stringify({
         messages: chatHistory,
         annee: document.getElementById('selAnnee').value,
@@ -167,20 +170,25 @@ async function sendMsg() {
         matiere: document.getElementById('selMatiere').value,
       })
     });
+
     const data = await res.json();
     typingEl.remove();
+
     if (!res.ok) {
-      if (res.status === 500 && data.message?.includes('API')) document.getElementById('noApiWarn').style.display = 'block';
-      addMessage('ia', `❌ ${data.message || 'Erreur serveur'}`);
+      addMessage('ia', '❌ ' + (data.message || 'Erreur serveur — réessaie'));
     } else {
-      const formatted = (data.reply || '').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\*(.*?)\*/g,'<em>$1</em>').replace(/\n/g,'<br>');
+      const formatted = (data.reply || '')
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/\n/g, '<br>');
       addMessage('ia', formatted, true);
       chatHistory.push({ role: 'assistant', content: data.reply });
     }
-  } catch {
+  } catch (e) {
     typingEl.remove();
     addMessage('ia', '❌ Impossible de contacter le serveur. Vérifie ta connexion.');
   }
+
   isLoading = false;
   document.getElementById('sendBtn').disabled = false;
   document.getElementById('msgInput').focus();
@@ -189,13 +197,13 @@ async function sendMsg() {
 function addMessage(role, text, isHtml=false) {
   const msgs = document.getElementById('messages');
   const div = document.createElement('div');
-  div.className = `message ${role}`;
+  div.className = 'message ' + role;
   const isIa = role === 'ia';
   div.innerHTML = `
-    <div class="msg-avatar ${isIa?'msg-ia':'msg-user'}">${isIa?'🤖':'👤'}</div>
+    <div class="msg-avatar ${isIa ? 'msg-ia' : 'msg-user'}">${isIa ? '🤖' : '👤'}</div>
     <div>
-      <div class="msg-meta">${isIa?'IA ÉDUCATIF':'TOI · أنت'}</div>
-      <div class="msg-bubble ${isIa?'ia':'user'}">${isHtml?text:esc(text)}</div>
+      <div class="msg-meta">${isIa ? 'IA ÉDUCATIF' : 'TOI · أنت'}</div>
+      <div class="msg-bubble ${isIa ? 'ia' : 'user'}">${isHtml ? text : esc(text)}</div>
     </div>`;
   msgs.appendChild(div);
   msgs.scrollTop = msgs.scrollHeight;
@@ -206,17 +214,26 @@ function addTyping() {
   const msgs = document.getElementById('messages');
   const div = document.createElement('div');
   div.className = 'message';
-  div.innerHTML = `<div class="msg-avatar msg-ia">🤖</div><div><div class="msg-meta">IA ÉDUCATIF</div><div class="msg-bubble ia"><div class="typing"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div></div></div>`;
+  div.innerHTML = `
+    <div class="msg-avatar msg-ia">🤖</div>
+    <div>
+      <div class="msg-meta">IA ÉDUCATIF</div>
+      <div class="msg-bubble ia">
+        <div class="typing">
+          <div class="typing-dot"></div>
+          <div class="typing-dot"></div>
+          <div class="typing-dot"></div>
+        </div>
+      </div>
+    </div>`;
   msgs.appendChild(div);
   msgs.scrollTop = msgs.scrollHeight;
   return div;
 }
 
-function esc(t) { return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-</script>
-</body>
-</html>
-</html>).replace(/>/g,'&gt;'); }
+function esc(t) {
+  return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
 </script>
 </body>
 </html>
