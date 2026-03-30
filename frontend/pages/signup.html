@@ -248,7 +248,7 @@
       }
 
       try {
-        const res = await fetch('http://localhost:5000/api/auth/register', {
+        const res = await fetch('https://edumind-api.onrender.com/api/auth/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ firstName, lastName, email, password })
@@ -264,9 +264,8 @@
           errorMsg.textContent = data.message || 'Erreur lors de l\'inscription';
         }
       } catch {
-        // Demo mode
-        document.getElementById('successOverlay').classList.add('show');
-        setTimeout(() => window.location.href = 'dashboard.html', 2000);
+        errorMsg.style.display = 'block';
+        errorMsg.textContent = 'Impossible de contacter le serveur. Réessaie dans quelques secondes · تعذّر الاتصال بالخادم';
       }
     }
   </script>
