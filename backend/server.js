@@ -70,7 +70,7 @@ const auth = async (req, res, next) => {
 const callGemini = async (systemPrompt, userMsg, maxTokens = 2000) => {
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new Error('GEMINI_API_KEY manquante sur Render');
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
+  const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
   const r = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -179,7 +179,7 @@ RÈGLES ABSOLUES:
 6. Sois encourageant comme un bon professeur algérien`;
 
     // Construire l'historique pour Gemini
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
+    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
     const geminiMessages = (messages || []).map((m, i) => ({
       role: m.role === 'assistant' ? 'model' : 'user',
       parts: [{ text: i === 0 ? systemPrompt + '\n\n' + m.content : m.content }]
