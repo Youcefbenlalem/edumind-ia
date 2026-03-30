@@ -1,9 +1,11 @@
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 require('dotenv').config();
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 const app = express();
 app.use(cors({ origin: '*' }));
@@ -115,18 +117,19 @@ app.post('/api/quiz/submit', auth, async (req, res) => {
   } catch (err) { res.status(500).json({ message: 'Erreur serveur' }); }
 });
 
-// ── IA PROXY ──
-const callClaude = async (system, userMsg, maxTokens = 2000) => {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error('ANTHROPIC_API_KEY manquante');
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: { 'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01' },
-    body: JSON.stringify({ model:'claude-opus-4-6', max_tokens:maxTokens, system, messages:[{role:'user',content:userMsg}] })
+// ── IA PROXY GEMINI ──
+const callGemini = async (system, userMsg) => {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error('GEMINI_API_KEY manquante');
+
+  const model = genAI.getGenerativeModel({ 
+    model: "gemini-1.5-flash",
+    systemInstruction: system 
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error?.message || 'Erreur API Claude');
-  return data.content?.map(c=>c.text||'').join('') || '';
+
+  const result = await model.generateContent(userMsg);
+  const response = await result.response;
+  return response.text();
 };
 
 // IA Chat — réponse pédagogique selon le programme algérien
@@ -144,21 +147,16 @@ RÈGLES:
 5. Pour math/physique: résous étape par étape avec la méthode algérienne
 6. Sois encourageant comme un bon professeur algérien`;
 
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) return res.status(500).json({ message: 'Clé API manquante' });
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01' },
-      body: JSON.stringify({ model:'claude-opus-4-6', max_tokens:1500, system, messages })
-    });
-    const data = await response.json();
-    if (!response.ok) return res.status(500).json({ message: data.error?.message || 'Erreur Claude' });
-    const reply = data.content?.map(c=>c.text||'').join('') || '';
+    // On récupère le dernier message de l'utilisateur pour l'envoyer à Gemini
+    const userMsg = messages[messages.length - 1].content;
+    const reply = await callGemini(system, userMsg);
     res.json({ reply });
-  } catch (err) { res.status(500).json({ message: err.message }); }
+  } catch (err) { 
+    res.status(500).json({ message: err.message }); 
+  }
 });
 
-// Génération de quiz + exercices math/physique
+// Génération de quiz + exercices math/physique via Gemini
 app.post('/api/ia/quiz', auth, async (req, res) => {
   try {
     const { annee, filiere, matiere, lecon, difficulte } = req.body;
@@ -189,7 +187,7 @@ Format JSON exact (rien d'autre):
 correct = index 0,1,2 ou 3 de la bonne réponse.`;
     }
 
-    const text = await callClaude(system, prompt, 2500);
+    const text = await callGemini(system, prompt);
     const clean = text.replace(/```json|```/g,'').trim();
     const parsed = JSON.parse(clean);
     res.json({ ...parsed, isMathPhys });
