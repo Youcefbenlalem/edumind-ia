@@ -134,7 +134,12 @@ function updateFilieres() {
 
 let chatHistory = [];
 let isLoading = false;
-const token = localStorage.getItem('token');
+function getToken() {
+  const t = localStorage.getItem('token');
+  if (!t) { window.location.href = 'signin.html'; return null; }
+  return t;
+}
+if (!localStorage.getItem('token')) window.location.href = 'signin.html';
 
 function sendSugg(btn) { document.getElementById('msgInput').value = btn.textContent; sendMsg(); }
 
@@ -154,7 +159,7 @@ async function sendMsg() {
   try {
     const res = await fetch(`${API}/api/ia/chat`, {
       method: 'POST',
-      headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+token },
+      headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+getToken() },
       body: JSON.stringify({
         messages: chatHistory,
         annee: document.getElementById('selAnnee').value,
@@ -208,6 +213,10 @@ function addTyping() {
 }
 
 function esc(t) { return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+</script>
+</body>
+</html>
+</html>).replace(/>/g,'&gt;'); }
 </script>
 </body>
 </html>
