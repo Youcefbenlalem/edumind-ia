@@ -306,7 +306,19 @@ app.patch('/api/friends/visibility', auth, async (req, res) => {
 app.get('/api/health', (_, res) => res.json({ status: 'ok', message: 'EDUMIND IA Backend Running 🧠' }));
 
 // ── START ──
-app.listen(process.env.PORT || 5000, () => console.log(`🚀 EDUMIND Backend running on port ${process.env.PORT || 5000}`));
+const server = app.listen(process.env.PORT || 5000, () => {
+  console.log(`🚀 EDUMIND Backend running on port ${process.env.PORT || 5000}`);
+});
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 EDUMIND Backend running on port ${PORT}`));
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`Port ${process.env.PORT || 5000} already in use, retrying in 3s...`);
+    setTimeout(() => {
+      server.close();
+      server.listen(process.env.PORT || 5000);
+    }, 3000);
+  } else {
+    console.error('Server error:', err);
+    process.exit(1);
+  }
+});
