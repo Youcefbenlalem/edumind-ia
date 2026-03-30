@@ -1,9 +1,9 @@
 require('dotenv').config();
-const express = require('express');
+const express  = require('express');
 const mongoose = require('mongoose');
-const cors = require('cors');
-const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs');
+const cors     = require('cors');
+const jwt      = require('jsonwebtoken');
+const bcrypt   = require('bcryptjs');
 
 const app = express();
 app.use(cors({ origin: '*' }));
@@ -44,9 +44,9 @@ const quizResultSchema = new mongoose.Schema({
   date:    { type: Date, default: Date.now }
 });
 
-const User         = mongoose.model('User', userSchema);
-const FriendReq    = mongoose.model('FriendRequest', friendRequestSchema);
-const QuizResult   = mongoose.model('QuizResult', quizResultSchema);
+const User       = mongoose.model('User', userSchema);
+const FriendReq  = mongoose.model('FriendRequest', friendRequestSchema);
+const QuizResult = mongoose.model('QuizResult', quizResultSchema);
 
 // ── HELPERS ──
 const JWT_SECRET = process.env.JWT_SECRET || 'edumind_secret_key';
@@ -66,17 +66,22 @@ const auth = async (req, res, next) => {
   }
 };
 
-const callClaude = async (system, userMsg, maxTok = 2000) => {
-  const key = process.env.ANTHROPIC_API_KEY;
-  if (!key) throw new Error('ANTHROPIC_API_KEY manquante sur Render');
-  const r = await fetch('https://api.anthropic.com/v1/messages', {
+// ── GEMINI API ──
+const callGemini = async (systemPrompt, userMsg, maxTokens = 2000) => {
+  const key = process.env.GEMINI_API_KEY;
+  if (!key) throw new Error('GEMINI_API_KEY manquante sur Render');
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
+  const r = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: maxTok, system, messages: [{ role: 'user', content: userMsg }] })
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ role: 'user', parts: [{ text: systemPrompt + '\n\n' + userMsg }] }],
+      generationConfig: { temperature: 0.7, maxOutputTokens: maxTokens }
+    })
   });
   const d = await r.json();
-  if (!r.ok) throw new Error(d.error?.message || 'Erreur Claude');
-  return d.content?.map(c => c.text || '').join('') || '';
+  if (!r.ok) throw new Error(d.error?.message || 'Erreur Gemini');
+  return d.candidates?.[0]?.content?.parts?.[0]?.text || '';
 };
 
 // ── AUTH ──
@@ -141,7 +146,7 @@ app.get('/api/stats/profile', auth, async (req, res) => {
   } catch (e) { res.status(500).json({ message: e.message }); }
 });
 
-// ── QUIZ ──
+// ── QUIZ SUBMIT ──
 app.post('/api/quiz/submit', auth, async (req, res) => {
   try {
     const { score, total, matiere, lecon, annee, filiere, points } = req.body;
@@ -150,40 +155,60 @@ app.post('/api/quiz/submit', auth, async (req, res) => {
   } catch (e) { res.status(500).json({ message: e.message }); }
 });
 
-// ── IA CHAT ──
+// ── IA CHAT (Gemini) ──
 app.post('/api/ia/chat', auth, async (req, res) => {
   try {
-    const key = process.env.ANTHROPIC_API_KEY;
-    if (!key) return res.status(500).json({ message: 'ANTHROPIC_API_KEY manquante — ajoute-la dans Render Environment' });
+    const key = process.env.GEMINI_API_KEY;
+    if (!key) return res.status(500).json({ message: 'GEMINI_API_KEY manquante — ajoute-la dans Render Environment' });
 
     const { messages, annee, filiere, matiere } = req.body;
-    const ctx    = [annee && `Année: ${annee}`, filiere && `Filière: ${filiere}`, matiere && `Matière: ${matiere}`].filter(Boolean).join(' | ');
-    const system = `Tu es un professeur expert du programme scolaire algérien officiel.
+    const ctx = [
+      annee   && `Année: ${annee}`,
+      filiere && `Filière: ${filiere}`,
+      matiere && `Matière: ${matiere}`
+    ].filter(Boolean).join(' | ');
+
+    const systemPrompt = `Tu es un professeur expert du programme scolaire algérien officiel (المنهاج الجزائري الرسمي).
 ${ctx ? 'Contexte élève: ' + ctx : ''}
-RÈGLES:
-1. Réponds selon la méthodologie algérienne officielle
-2. Arabe/Éducation Islamique → réponds en arabe, sinon en français
-3. Structure: définition → explication → exemple algérien → règle
-4. Exemples avec prénoms et villes algériens
-5. Math/physique: résolution étape par étape selon manuels algériens
+RÈGLES ABSOLUES:
+1. Réponds UNIQUEMENT selon la méthodologie pédagogique algérienne officielle
+2. Si matière = Arabe ou Éducation Islamique → réponds en arabe, sinon en français
+3. Structure: définition → explication → exemple algérien → règle à retenir
+4. Utilise des prénoms et villes algériens dans tes exemples
+5. Pour math/physique: résous étape par étape selon les manuels algériens
 6. Sois encourageant comme un bon professeur algérien`;
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    // Construire l'historique pour Gemini
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
+    const geminiMessages = (messages || []).map((m, i) => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: i === 0 ? systemPrompt + '\n\n' + m.content : m.content }]
+    }));
+
+    if (!geminiMessages.length) {
+      geminiMessages.push({ role: 'user', parts: [{ text: systemPrompt + '\n\nBonjour' }] });
+    }
+
+    const response = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 1500, system, messages })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: geminiMessages,
+        generationConfig: { temperature: 0.7, maxOutputTokens: 1500 }
+      })
     });
     const data = await response.json();
-    if (!response.ok) return res.status(500).json({ message: data.error?.message || 'Erreur Claude' });
-    res.json({ reply: data.content?.map(c => c.text || '').join('') || '' });
+    if (!response.ok) return res.status(500).json({ message: data.error?.message || 'Erreur Gemini' });
+    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    res.json({ reply });
   } catch (e) { res.status(500).json({ message: e.message }); }
 });
 
-// ── IA QUIZ ──
+// ── IA QUIZ (Gemini) ──
 app.post('/api/ia/quiz', auth, async (req, res) => {
   try {
-    const key = process.env.ANTHROPIC_API_KEY;
-    if (!key) return res.status(500).json({ message: 'ANTHROPIC_API_KEY manquante' });
+    const key = process.env.GEMINI_API_KEY;
+    if (!key) return res.status(500).json({ message: 'GEMINI_API_KEY manquante' });
 
     const { annee, filiere, matiere, lecon, difficulte } = req.body;
     const isMathPhys = ['Mathématiques', 'Physique-Chimie', 'Sciences Techniques'].includes(matiere);
@@ -193,18 +218,18 @@ app.post('/api/ia/quiz', auth, async (req, res) => {
     let userMsg;
     if (isMathPhys) {
       userMsg = `Génère 4 exercices pour: ${ctx}
-Format JSON exact:
+Format JSON exact (rien d'autre):
 {"exercices":[{"numero":1,"titre":"Titre","enonce":"Énoncé","donnees":"Données","questions":["1) Q1","2) Q2"],"correction":"Correction étape par étape","bareme":5}]}`;
     } else {
       const arabe = ['Arabe', 'Éducation Islamique', 'Littérature Arabe'].includes(matiere);
       userMsg = `Génère 8 QCM pour: ${ctx}
 ${arabe ? 'En arabe.' : 'En français.'}
-Format JSON exact:
+Format JSON exact (rien d'autre):
 {"questions":[{"question":"Q?","options":["A) ...","B) ...","C) ...","D) ..."],"correct":0,"explication":"..."}]}
-correct = index 0,1,2 ou 3.`;
+correct = index 0, 1, 2 ou 3.`;
     }
 
-    const text   = await callClaude(system, userMsg, 2500);
+    const text   = await callGemini(system, userMsg, 2500);
     const clean  = text.replace(/```json|```/g, '').trim();
     const parsed = JSON.parse(clean);
     res.json({ ...parsed, isMathPhys });
@@ -305,20 +330,7 @@ app.patch('/api/friends/visibility', auth, async (req, res) => {
 // ── HEALTH ──
 app.get('/api/health', (_, res) => res.json({ status: 'ok', message: 'EDUMIND IA Backend Running 🧠' }));
 
-// ── START ──
-const server = app.listen(process.env.PORT || 5000, () => {
+// ── START (pas de const PORT pour éviter les erreurs Render) ──
+app.listen(process.env.PORT || 5000, () => {
   console.log(`🚀 EDUMIND Backend running on port ${process.env.PORT || 5000}`);
-});
-
-server.on('error', (err) => {
-  if (err.code === 'EADDRINUSE') {
-    console.error(`Port ${process.env.PORT || 5000} already in use, retrying in 3s...`);
-    setTimeout(() => {
-      server.close();
-      server.listen(process.env.PORT || 5000);
-    }, 3000);
-  } else {
-    console.error('Server error:', err);
-    process.exit(1);
-  }
 });
