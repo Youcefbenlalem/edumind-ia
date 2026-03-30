@@ -191,7 +191,7 @@
       errorMsg.style.display = 'none';
 
       try {
-        const res = await fetch('http://localhost:5000/api/auth/login', {
+        const res = await fetch('https://edumind-api.onrender.com/api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password })
@@ -207,9 +207,8 @@
           errorMsg.textContent = data.message || 'Email ou mot de passe incorrect · البريد أو كلمة المرور غير صحيحة';
         }
       } catch {
-        // Demo mode - redirect anyway
-        document.getElementById('successOverlay').classList.add('show');
-        setTimeout(() => window.location.href = 'dashboard.html', 1800);
+        errorMsg.style.display = 'block';
+        errorMsg.textContent = 'Impossible de contacter le serveur. Réessaie dans quelques secondes · تعذّر الاتصال بالخادم';
       }
     }
   </script>
