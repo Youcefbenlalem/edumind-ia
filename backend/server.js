@@ -213,25 +213,48 @@ app.post('/api/ia/quiz', auth, async (req, res) => {
     const { annee, filiere, matiere, lecon, difficulte } = req.body;
     const isMathPhys = ['Mathématiques', 'Physique-Chimie', 'Sciences Techniques'].includes(matiere);
     const ctx        = `Année: ${annee}${filiere ? ' - Filière: ' + filiere : ''} | Matière: ${matiere} | Leçon: ${lecon} | Difficulté: ${difficulte}`;
-    const system     = 'Tu es un professeur expert du programme scolaire algérien. Réponds UNIQUEMENT en JSON valide, sans markdown, sans texte avant ou après.';
+    const system = 'Tu es un professeur expert du programme scolaire algérien. IMPORTANT: Ta réponse doit contenir UNIQUEMENT du JSON brut valide. Pas de markdown, pas de backticks, pas de texte avant ou après le JSON. Commence directement par { ou [.';
 
     let userMsg;
     if (isMathPhys) {
-      userMsg = `Génère 4 exercices pour: ${ctx}
-Format JSON exact (rien d'autre):
-{"exercices":[{"numero":1,"titre":"Titre","enonce":"Énoncé","donnees":"Données","questions":["1) Q1","2) Q2"],"correction":"Correction étape par étape","bareme":5}]}`;
+      userMsg = `Génère exactement 4 exercices pour: ${ctx}
+Réponds avec UNIQUEMENT ce JSON (rien d'autre, pas d'explication):
+{"exercices":[{"numero":1,"titre":"Titre court","enonce":"Énoncé complet de l'exercice","donnees":"Données numériques si applicable, sinon vide","questions":["1) Première question","2) Deuxième question","3) Troisième question"],"correction":"Correction détaillée étape par étape selon la méthode algérienne","bareme":5},{"numero":2,"titre":"...","enonce":"...","donnees":"...","questions":["1) ..."],"correction":"...","bareme":5},{"numero":3,"titre":"...","enonce":"...","donnees":"...","questions":["1) ..."],"correction":"...","bareme":5},{"numero":4,"titre":"...","enonce":"...","donnees":"...","questions":["1) ..."],"correction":"...","bareme":5}]}`;
     } else {
       const arabe = ['Arabe', 'Éducation Islamique', 'Littérature Arabe'].includes(matiere);
-      userMsg = `Génère 8 QCM pour: ${ctx}
-${arabe ? 'En arabe.' : 'En français.'}
-Format JSON exact (rien d'autre):
-{"questions":[{"question":"Q?","options":["A) ...","B) ...","C) ...","D) ..."],"correct":0,"explication":"..."}]}
-correct = index 0, 1, 2 ou 3.`;
+      userMsg = `Génère exactement 8 questions QCM pour: ${ctx}
+${arabe ? 'Questions en arabe obligatoirement.' : 'Questions en français.'}
+Réponds avec UNIQUEMENT ce JSON (rien d'autre, pas d'explication):
+{"questions":[{"question":"Première question ?","options":["A) Option A","B) Option B","C) Option C","D) Option D"],"correct":0,"explication":"Explication selon méthode algérienne"},{"question":"Deuxième question ?","options":["A) ...","B) ...","C) ...","D) ..."],"correct":1,"explication":"..."},{"question":"...","options":["A) ...","B) ...","C) ...","D) ..."],"correct":2,"explication":"..."},{"question":"...","options":["A) ...","B) ...","C) ...","D) ..."],"correct":0,"explication":"..."},{"question":"...","options":["A) ...","B) ...","C) ...","D) ..."],"correct":3,"explication":"..."},{"question":"...","options":["A) ...","B) ...","C) ...","D) ..."],"correct":1,"explication":"..."},{"question":"...","options":["A) ...","B) ...","C) ...","D) ..."],"correct":2,"explication":"..."},{"question":"...","options":["A) ...","B) ...","C) ...","D) ..."],"correct":0,"explication":"..."}]}
+correct = index 0, 1, 2 ou 3 de la bonne réponse.`;
     }
 
-    const text   = await callGemini(system, userMsg, 2500);
-    const clean  = text.replace(/```json|```/g, '').trim();
-    const parsed = JSON.parse(clean);
+    const text = await callGemini(system, userMsg, 2500);
+
+    // Extraction robuste du JSON — Gemini ajoute parfois du texte autour
+    let parsed;
+    try {
+      // Essai 1: nettoyage simple
+      const clean = text.replace(/```json|```/g, '').trim();
+      parsed = JSON.parse(clean);
+    } catch {
+      try {
+        // Essai 2: extraire le premier { ... } ou [ ... ]
+        const match = text.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
+        if (match) parsed = JSON.parse(match[0]);
+        else throw new Error('Aucun JSON trouvé dans la réponse');
+      } catch {
+        // Essai 3: extraire entre la première { et la dernière }
+        const first = text.indexOf('{');
+        const last  = text.lastIndexOf('}');
+        if (first !== -1 && last !== -1) {
+          parsed = JSON.parse(text.substring(first, last + 1));
+        } else {
+          throw new Error('JSON introuvable — réponse Gemini: ' + text.substring(0, 200));
+        }
+      }
+    }
+
     res.json({ ...parsed, isMathPhys });
   } catch (e) { res.status(500).json({ message: 'Erreur génération: ' + e.message }); }
 });
