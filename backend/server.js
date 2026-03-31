@@ -78,37 +78,29 @@ const callGemini = async (prompt, maxTokens) => {
 };
 
 const extractJSON = (text) => {
-  // Nettoyer le texte
-  let clean = text
-    .replace(/```json/g, '').replace(/```/g, '')
-    .replace(/[\u0000-\u001F\u007F]/g, ' ') // supprimer caractères de contrôle
-    .trim();
+  let clean = text.replace(/```json/g, '').replace(/```/g, '').trim();
 
-  // Extraire entre le premier { et le dernier }
+  // Trouver le JSON entre { et }
   const a = clean.indexOf('{');
   const b = clean.lastIndexOf('}');
-  if (a === -1 || b === -1) throw new Error('Aucun JSON trouvé');
+  if (a === -1 || b === -1) throw new Error('Aucun JSON trouve dans la reponse');
   clean = clean.substring(a, b + 1);
 
   // Essai direct
   try { return JSON.parse(clean); } catch (e1) {
-    // Essai avec nettoyage des apostrophes problématiques dans les valeurs
-    // Remplacer les apostrophes non échappées à l'intérieur des strings JSON
-    try {
-      // Remplacer \n mal placés
-      const cleaned2 = clean
-        .replace(/:\s*"([^"]*?)"/g, (match, p1) => {
-          const fixed = p1
-            .replace(/\\/g, '\\\\')
-            .replace(/\n/g, ' ')
-            .replace(/\r/g, ' ')
-            .replace(/\t/g, ' ');
-          return ': "' + fixed + '"';
-        });
-      return JSON.parse(cleaned2);
-    } catch (e2) {
-      // Dernier recours: eval-like parsing avec Function
-      throw new Error('JSON invalide: ' + e1.message + ' | Texte reçu: ' + clean.substring(0, 300));
+    // Nettoyer les backslashes LaTeX qui cassent le JSON
+    // Remplacer \\frac, \\mathbb, etc. par du texte simple
+    const sanitized = clean
+      .replace(/\\\\frac\{([^}]*)\}\{([^}]*)\}/g, '($1)/($2)')
+      .replace(/\\\\mathbb\{([^}]*)\}/g, '$1')
+      .replace(/\\\\sqrt\{([^}]*)\}/g, 'racine($1)')
+      .replace(/\\\\in/g, 'appartient a')
+      .replace(/\\\\setminus/g, 'privé de')
+      .replace(/\\\\[a-zA-Z]+/g, '')
+      .replace(/\$([^$]*)\$/g, '$1')
+      .replace(/[\x00-\x1F\x7F]/g, ' ');
+    try { return JSON.parse(sanitized); } catch (e2) {
+      throw new Error('JSON invalide apres nettoyage: ' + e1.message);
     }
   }
 };
@@ -191,20 +183,23 @@ app.post('/api/ia/quiz', auth, async (req, res) => {
 
     let prompt;
     if (isMathPhys) {
-      prompt = `Tu es un professeur expert du programme scolaire algerien.
-Genere 4 exercices de ${matiere} niveau ${difficulte} sur la lecon "${lecon}" pour ${annee}${filiere ? ' filiere ' + filiere : ''}.
-Retourne un objet JSON avec cette structure exacte:
-{"exercices":[{"numero":1,"titre":"titre","enonce":"enonce","donnees":"donnees ou vide","questions":["1) q1","2) q2"],"correction":"correction detaillee","bareme":5}]}
-Genere exactement 4 exercices adaptes au programme algerien.`;
+      prompt = `Tu es un professeur du programme scolaire algerien.
+Genere 4 exercices de ${matiere} niveau ${difficulte} sur "${lecon}" pour ${annee}${filiere ? ' filiere ' + filiere : ''}.
+TRES IMPORTANT: 
+- Ecris les maths en TEXTE SIMPLE uniquement. PAS de LaTeX, PAS de symboles comme \\frac \\mathbb $ etc.
+- Ecris par exemple: f(x) = (x^2 - 1)/(x - 1) au lieu de \\frac{x^2-1}{x-1}
+- Ecris: appartient a R au lieu de \\in \\mathbb{R}
+- Ecris: racine de x au lieu de \\sqrt{x}
+Retourne uniquement ce JSON:
+{"exercices":[{"numero":1,"titre":"titre ici","enonce":"enonce en texte simple","donnees":"donnees ou vide","questions":["1) question un","2) question deux"],"correction":"correction en texte simple etape par etape","bareme":5},{"numero":2,"titre":"titre","enonce":"enonce","donnees":"","questions":["1) q"],"correction":"correction","bareme":5},{"numero":3,"titre":"titre","enonce":"enonce","donnees":"","questions":["1) q"],"correction":"correction","bareme":5},{"numero":4,"titre":"titre","enonce":"enonce","donnees":"","questions":["1) q"],"correction":"correction","bareme":5}]}`;
     } else {
       const arabe = ['Arabe', 'Éducation Islamique', 'Littérature Arabe'].includes(matiere);
-      prompt = `Tu es un professeur expert du programme scolaire algerien.
-Genere 8 questions QCM de ${matiere} niveau ${difficulte} sur la lecon "${lecon}" pour ${annee}${filiere ? ' filiere ' + filiere : ''}.
-${arabe ? 'Les questions doivent etre en arabe.' : 'Les questions doivent etre en francais.'}
-Retourne un objet JSON avec cette structure exacte:
-{"questions":[{"question":"question ?","options":["A) rep1","B) rep2","C) rep3","D) rep4"],"correct":0,"explication":"explication"}]}
-correct est l index 0 1 2 ou 3 de la bonne reponse.
-Genere exactement 8 questions variees et pedagogiques selon le programme algerien.`;
+      prompt = `Tu es un professeur du programme scolaire algerien.
+Genere 8 questions QCM de ${matiere} niveau ${difficulte} sur "${lecon}" pour ${annee}${filiere ? ' filiere ' + filiere : ''}.
+${arabe ? 'Questions en arabe.' : 'Questions en francais.'}
+TRES IMPORTANT: Texte simple uniquement, pas de LaTeX ni de symboles speciaux.
+Retourne uniquement ce JSON:
+{"questions":[{"question":"question 1 ?","options":["A) rep","B) rep","C) rep","D) rep"],"correct":0,"explication":"explication"},{"question":"question 2 ?","options":["A) rep","B) rep","C) rep","D) rep"],"correct":1,"explication":"explication"},{"question":"question 3 ?","options":["A) rep","B) rep","C) rep","D) rep"],"correct":2,"explication":"explication"},{"question":"question 4 ?","options":["A) rep","B) rep","C) rep","D) rep"],"correct":0,"explication":"explication"},{"question":"question 5 ?","options":["A) rep","B) rep","C) rep","D) rep"],"correct":3,"explication":"explication"},{"question":"question 6 ?","options":["A) rep","B) rep","C) rep","D) rep"],"correct":1,"explication":"explication"},{"question":"question 7 ?","options":["A) rep","B) rep","C) rep","D) rep"],"correct":2,"explication":"explication"},{"question":"question 8 ?","options":["A) rep","B) rep","C) rep","D) rep"],"correct":0,"explication":"explication"}]}`;
     }
 
     const text   = await callGemini(prompt, 3000);
