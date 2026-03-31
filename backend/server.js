@@ -74,11 +74,39 @@ const callGemini = async (prompt, maxTokens) => {
 };
 
 const extractJSON = (text) => {
-  try { return JSON.parse(text.replace(/```json|```/g, '').trim()); } catch {}
-  try { const m = text.match(/(\{[\s\S]*\})/); if (m) return JSON.parse(m[0]); } catch {}
-  const a = text.indexOf('{'), b = text.lastIndexOf('}');
-  if (a !== -1 && b !== -1) return JSON.parse(text.substring(a, b + 1));
-  throw new Error('JSON introuvable dans la réponse Gemini');
+  // Nettoyer le texte
+  let clean = text
+    .replace(/```json/g, '').replace(/```/g, '')
+    .replace(/[\u0000-\u001F\u007F]/g, ' ') // supprimer caractères de contrôle
+    .trim();
+
+  // Extraire entre le premier { et le dernier }
+  const a = clean.indexOf('{');
+  const b = clean.lastIndexOf('}');
+  if (a === -1 || b === -1) throw new Error('Aucun JSON trouvé');
+  clean = clean.substring(a, b + 1);
+
+  // Essai direct
+  try { return JSON.parse(clean); } catch (e1) {
+    // Essai avec nettoyage des apostrophes problématiques dans les valeurs
+    // Remplacer les apostrophes non échappées à l'intérieur des strings JSON
+    try {
+      // Remplacer \n mal placés
+      const cleaned2 = clean
+        .replace(/:\s*"([^"]*?)"/g, (match, p1) => {
+          const fixed = p1
+            .replace(/\\/g, '\\\\')
+            .replace(/\n/g, ' ')
+            .replace(/\r/g, ' ')
+            .replace(/\t/g, ' ');
+          return ': "' + fixed + '"';
+        });
+      return JSON.parse(cleaned2);
+    } catch (e2) {
+      // Dernier recours: eval-like parsing avec Function
+      throw new Error('JSON invalide: ' + e1.message + ' | Texte reçu: ' + clean.substring(0, 300));
+    }
+  }
 };
 
 app.post('/api/auth/register', async (req, res) => {
@@ -159,15 +187,15 @@ app.post('/api/ia/quiz', auth, async (req, res) => {
 
     let prompt;
     if (isMathPhys) {
-      prompt = `Tu es un professeur du programme scolaire algérien. Génère 4 exercices pour: ${ctx}
-Réponds avec UNIQUEMENT ce JSON brut (rien d'autre, commence par {):
-{"exercices":[{"numero":1,"titre":"Titre","enonce":"Énoncé complet","donnees":"Données","questions":["1) Q1","2) Q2"],"correction":"Correction étape par étape","bareme":5},{"numero":2,"titre":"...","enonce":"...","donnees":"...","questions":["1) ..."],"correction":"...","bareme":5},{"numero":3,"titre":"...","enonce":"...","donnees":"...","questions":["1) ..."],"correction":"...","bareme":5},{"numero":4,"titre":"...","enonce":"...","donnees":"...","questions":["1) ..."],"correction":"...","bareme":5}]}`;
+      prompt = `Tu es un professeur du programme scolaire algerien. Genere 4 exercices pour: ${ctx}
+IMPORTANT: Reponds avec UNIQUEMENT du JSON valide. Pas d'apostrophes dans le JSON, utilise des espaces a la place. Commence directement par le caractere {
+{"exercices":[{"numero":1,"titre":"Titre","enonce":"Enonce complet de exercice","donnees":"Donnees numeriques","questions":["1) Question un","2) Question deux"],"correction":"Correction etape par etape","bareme":5},{"numero":2,"titre":"Titre 2","enonce":"Enonce 2","donnees":"","questions":["1) Q1","2) Q2"],"correction":"Correction 2","bareme":5},{"numero":3,"titre":"Titre 3","enonce":"Enonce 3","donnees":"","questions":["1) Q1"],"correction":"Correction 3","bareme":5},{"numero":4,"titre":"Titre 4","enonce":"Enonce 4","donnees":"","questions":["1) Q1"],"correction":"Correction 4","bareme":5}]}`;
     } else {
       const arabe = ['Arabe', 'Éducation Islamique', 'Littérature Arabe'].includes(matiere);
-      prompt = `Tu es un professeur du programme scolaire algérien. Génère 8 questions QCM pour: ${ctx}
-${arabe ? 'Questions en arabe.' : 'Questions en français.'}
-Réponds avec UNIQUEMENT ce JSON brut (commence directement par {, pas de texte avant):
-{"questions":[{"question":"Q1?","options":["A) ...","B) ...","C) ...","D) ..."],"correct":0,"explication":"..."},{"question":"Q2?","options":["A) ...","B) ...","C) ...","D) ..."],"correct":1,"explication":"..."},{"question":"Q3?","options":["A) ...","B) ...","C) ...","D) ..."],"correct":2,"explication":"..."},{"question":"Q4?","options":["A) ...","B) ...","C) ...","D) ..."],"correct":0,"explication":"..."},{"question":"Q5?","options":["A) ...","B) ...","C) ...","D) ..."],"correct":3,"explication":"..."},{"question":"Q6?","options":["A) ...","B) ...","C) ...","D) ..."],"correct":1,"explication":"..."},{"question":"Q7?","options":["A) ...","B) ...","C) ...","D) ..."],"correct":2,"explication":"..."},{"question":"Q8?","options":["A) ...","B) ...","C) ...","D) ..."],"correct":0,"explication":"..."}]}`;
+      prompt = `Tu es un professeur du programme scolaire algerien. Genere 8 QCM pour: ${ctx}
+${arabe ? 'Questions en arabe.' : 'Questions en francais.'}
+IMPORTANT: Reponds avec UNIQUEMENT du JSON valide. Evite les apostrophes, utilise des espaces. Commence directement par {
+{"questions":[{"question":"Question 1 ?","options":["A) option","B) option","C) option","D) option"],"correct":0,"explication":"explication 1"},{"question":"Question 2 ?","options":["A) option","B) option","C) option","D) option"],"correct":1,"explication":"explication 2"},{"question":"Question 3 ?","options":["A) option","B) option","C) option","D) option"],"correct":2,"explication":"explication 3"},{"question":"Question 4 ?","options":["A) option","B) option","C) option","D) option"],"correct":0,"explication":"explication 4"},{"question":"Question 5 ?","options":["A) option","B) option","C) option","D) option"],"correct":3,"explication":"explication 5"},{"question":"Question 6 ?","options":["A) option","B) option","C) option","D) option"],"correct":1,"explication":"explication 6"},{"question":"Question 7 ?","options":["A) option","B) option","C) option","D) option"],"correct":2,"explication":"explication 7"},{"question":"Question 8 ?","options":["A) option","B) option","C) option","D) option"],"correct":0,"explication":"explication 8"}]}`;
     }
 
     const text   = await callGemini(prompt, 3000);
@@ -266,4 +294,3 @@ app.get('/api/health', (_, res) => res.json({ status: 'ok', message: 'EDUMIND IA
 app.listen(process.env.PORT || 5000, () => {
   console.log(`🚀 EDUMIND Backend running on port ${process.env.PORT || 5000}`);
 });
-
