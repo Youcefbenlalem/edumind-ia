@@ -783,6 +783,1004 @@ async function startQuiz() {
     document.getElementById('loadingOverlay').classList.remove('show');
 
     if (!res.ok) {
+      showQuizError(data.message || 'Erreur serveur');
+      return;
+    }
+
+    if (data.isMathPhys && data.exercices?.length > 0) {
+      renderExercices(data.exercices);
+    } else if (data.questions?.length > 0) {
+      quizData.questions = data.questions.map(q => ({
+        question:    q.question,
+        options:     q.options,
+        correct:     q.correct,
+        explanation: q.explication || q.explanation || ''
+      }));
+      quizData.current = 0; quizData.score = 0;
+      document.getElementById('quizArea').classList.add('active');
+      renderQuestion();
+    } else {
+      showQuizError('Réponse IA invalide — réessaie dans quelques secondes');
+    }
+  } catch(e) {
+    document.getElementById('loadingOverlay').classList.remove('show');
+    showQuizError('Impossible de contacter le serveur. Vérifie ta connexion.');
+  }
+}
+
+function showQuizError(msg) {
+  document.getElementById('setupCard').style.display = '';
+  document.getElementById('loadingOverlay').classList.remove('show');
+  // Afficher l'erreur dans un toast
+  const toast = document.createElement('div');
+  toast.style.cssText = 'position:fixed;bottom:2rem;left:50%;transform:translateX(-50%);background:rgba(248,113,113,0.15);border:1px solid rgba(248,113,113,0.4);border-radius:14px;padding:1rem 1.5rem;color:#f87171;font-size:0.9rem;z-index:999;max-width:90%;text-align:center;backdrop-filter:blur(12px)';
+  toast.textContent = '❌ ' + msg;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 5000);
+}
+
+// ── EXERCICES MATH/PHYSIQUE ──
+function renderExercices(exercices) {
+  const area = document.getElementById('quizArea');
+  area.classList.add('active');
+  document.getElementById('quizInfo').textContent = `${exercices.length} exercices · ${state.matiere}`;
+  document.getElementById('quizScore').textContent = state.annee?.label || '';
+  document.getElementById('progressFill').style.width = '100%';
+  document.getElementById('btnNext').classList.remove('show');
+
+  const html = exercices.map((ex, i) => `
+    <div class="question-card" style="margin-bottom:1.2rem">
+      <div class="q-num">EXERCICE ${i+1} · تمرين ${toArabicNum(i+1)} — ${ex.titre || ''}</div>
+      <div class="q-text" style="margin-bottom:1rem">${(ex.enonce||'').replace(/\n/g,'<br>')}</div>
+      ${ex.donnees ? `<div style="background:rgba(0,201,167,.07);border:1px solid rgba(0,201,167,.2);border-radius:10px;padding:.8rem 1rem;margin-bottom:1rem;font-size:.85rem;color:var(--emerald)"><strong>📐 Données :</strong><br>${ex.donnees.replace(/\n/g,'<br>')}</div>` : ''}
+      <div style="margin-bottom:1rem">
+        ${(ex.questions||[]).map(q=>`<div style="padding:.5rem 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:.9rem;color:var(--white)">${q}</div>`).join('')}
+      </div>
+      <div style="background:rgba(245,200,66,.06);border:1px solid rgba(245,200,66,.2);border-radius:10px;padding:1rem;margin-top:.5rem">
+        <div style="font-size:.7rem;letter-spacing:2px;color:var(--gold);font-weight:700;margin-bottom:.6rem">✅ CORRECTION · التصحيح</div>
+        <div style="font-size:.85rem;color:var(--muted);line-height:1.8">${(ex.correction||'').replace(/\n/g,'<br>')}</div>
+      </div>
+      ${ex.bareme ? `<div style="text-align:right;margin-top:.5rem;font-size:.75rem;color:var(--muted)">Barème: ${ex.bareme} pts</div>` : ''}
+    </div>`).join('');
+
+  document.getElementById('questionContainer').innerHTML = html;
+
+  // Bouton résultats direct pour les exercices
+  document.getElementById('btnNext').textContent = 'Terminer · إنهاء ✅';
+  document.getElementById('btnNext').classList.add('show');
+  document.getElementById('btnNext').onclick = () => showResultsExercices(exercices.length);
+}
+
+function showResultsExercices(nb) {
+  document.getElementById('quizArea').classList.remove('active');
+  const rc = document.getElementById('resultsCard');
+  rc.classList.add('show');
+  document.getElementById('resultEmoji').textContent = '📚';
+  document.getElementById('resultScore').textContent = `${nb} exercices`;
+  document.getElementById('resultMsg').textContent = `Tu as révisé ${nb} exercices de ${state.matiere} — Bravo !`;
+  document.getElementById('resultMsgAr').textContent = `لقد راجعت ${nb} تمارين في مادة ${state.matiere} — أحسنت!`;
+  const token = localStorage.getItem('token');
+  if (token) {
+    fetch(`${API}/api/quiz/submit`, {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body: JSON.stringify({ score: nb, total: nb, matiere: state.matiere, lecon: state.lecon, annee: state.annee?.id, points: nb * 15 })
+    }).catch(()=>{});
+  }
+}
+
+function useFallbackQuiz() {
+  quizData.questions = [
+    { question:`Quel est le concept principal de la leçon "${state.lecon}" en ${state.matiere} ?`, options:['Option A','Option B','Option C','Option D'], correct:0, explanation:`Cette leçon fait partie du programme ${state.annee?.label} selon le curriculum algérien.` },
+    { question:`Selon le programme algérien, quelle est la définition principale liée à "${state.lecon}" ?`, options:['Définition A','Définition B','Définition C','Définition D'], correct:1, explanation:`Selon la méthodologie officielle algérienne, ce concept est fondamental.` },
+  ];
+  quizData.current = 0; quizData.score = 0;
+  document.getElementById('loadingOverlay').classList.remove('show');
+  document.getElementById('quizArea').classList.add('active');
+  document.getElementById('btnNext').onclick = nextQuestion;
+  renderQuestion();
+}
+
+// ══════════════════════════════════════════
+// RENDER QUESTION
+// ══════════════════════════════════════════
+function renderQuestion() {
+  const q = quizData.questions[quizData.current];
+  const total = quizData.questions.length;
+  const pct = (quizData.current / total) * 100;
+
+  document.getElementById('quizInfo').textContent = `Question ${quizData.current+1}/${total}`;
+  document.getElementById('quizScore').textContent = `Score: ${quizData.score}/${total}`;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('btnNext').classList.remove('show');
+
+  const letters = ['A','B','C','D'];
+  const html = `
+    <div class="question-card">
+      <div class="q-num">QUESTION ${quizData.current+1} · السؤال ${toArabicNum(quizData.current+1)}</div>
+      <div class="q-text">${q.question}</div>
+      <div class="answers-grid">
+        ${q.options.map((opt,i) => `
+          <button class="ans-btn" onclick="selectAnswer(${i})" id="ans_${i}">
+            <span class="ans-letter">${letters[i]}</span>
+            ${opt}
+          </button>
+        `).join('')}
+      </div>
+      <div class="explanation-box" id="explanationBox">
+        <div class="expl-title">💡 EXPLICATION · الشرح</div>
+        <div class="expl-text">${q.explanation || ''}</div>
+      </div>
+    </div>
+  `;
+  document.getElementById('questionContainer').innerHTML = html;
+}
+
+function toArabicNum(n) {
+  return n.toString().replace(/\d/g, d => '٠١٢٣٤٥٦٧٨٩'[d]);
+}
+
+function selectAnswer(idx) {
+  const q = quizData.questions[quizData.current];
+  document.querySelectorAll('.ans-btn').forEach(b => b.disabled = true);
+  document.getElementById(`ans_${idx}`).classList.add(idx === q.correct ? 'correct' : 'wrong');
+  if (idx !== q.correct) document.getElementById(`ans_${q.correct}`).classList.add('correct');
+  if (idx === q.correct) quizData.score++;
+  document.getElementById('quizScore').textContent = `Score: ${quizData.score}/${quizData.questions.length}`;
+  document.getElementById('explanationBox').classList.add('show');
+  document.getElementById('btnNext').classList.add('show');
+  if (quizData.current === quizData.questions.length - 1) {
+    document.getElementById('btnNext').textContent = 'Voir les résultats · النتائج 🏆';
+  }
+}
+
+function nextQuestion() {
+  quizData.current++;
+  if (quizData.current >= quizData.questions.length) {
+    showResults();
+  } else {
+    renderQuestion();
+  }
+}
+
+// ══════════════════════════════════════════
+// RESULTS
+// ══════════════════════════════════════════
+async function showResults() {
+  document.getElementById('quizArea').classList.remove('active');
+  const total = quizData.questions.length;
+  const score = quizData.score;
+  const pct = Math.round((score/total)*100);
+  const rc = document.getElementById('resultsCard');
+  rc.classList.add('show');
+
+  let emoji = '🏆', msgFr = '', msgAr = '';
+  if (pct >= 80) { emoji = '🏆'; msgFr = `Excellent ! Tu as obtenu ${pct}% ! Continue comme ça !`; msgAr = `ممتاز! حصلت على ${pct}٪! استمر هكذا!`; }
+  else if (pct >= 60) { emoji = '👍'; msgFr = `Bien joué ! ${pct}% — encore un effort !`; msgAr = `أحسنت! ${pct}٪ — اجتهد أكثر!`; }
+  else { emoji = '💪'; msgFr = `${pct}% — Ne te décourage pas ! La révision paie toujours.`; msgAr = `${pct}٪ — لا تستسلم! المراجعة ستنفع دائماً.`; }
+
+  document.getElementById('resultEmoji').textContent = emoji;
+  document.getElementById('resultScore').textContent = `${score}/${total}`;
+  document.getElementById('resultMsg').textContent = msgFr;
+  document.getElementById('resultMsgAr').textContent = msgAr;
+
+  // Save score
+  const token = localStorage.getItem('token');
+  if (token) {
+    try {
+      await fetch('https://edumind-api.onrender.com/api/quiz/submit', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json','Authorization':'Bearer '+token },
+        body: JSON.stringify({ score, total, matiere: state.matiere, lecon: state.lecon, annee: state.annee?.id, points: score * 10 })
+      });
+    } catch {}
+  }
+}
+
+function resetQuiz() {
+  state = { annee:null, filiere:null, matiere:null, lecon:null, diff:null };
+  quizData = { questions:[], current:0, score:0 };
+  document.getElementById('resultsCard').classList.remove('show');
+  document.getElementById('quizArea').classList.remove('active');
+  document.getElementById('setupCard').style.display = '';
+  document.getElementById('grpFiliere').classList.add('hidden');
+  document.getElementById('grpMatiere').classList.add('hidden');
+  document.getElementById('grpLecon').classList.add('hidden');
+  document.getElementById('grpDiff').classList.add('hidden');
+  document.querySelectorAll('.opt-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('btnStart').disabled = true;
+  init();
+}
+
+// Boot
+document.getElementById('optAnnee').innerHTML = '';
+init();
+</script>
+</body>
+</html><!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>EDUMIND IA — Quiz & Questions</title>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --emerald: #00c9a7; --emerald-dark: #008f76;
+      --navy: #0a0e1a; --navy-light: #1a2340;
+      --gold: #f5c842; --white: #f0f4ff; --muted: #8896b3;
+      --purple: #a78bfa; --red: #ff5f6d;
+    }
+    body { font-family: 'Syne','Tajawal',sans-serif; background: var(--navy); color: var(--white); min-height: 100vh; }
+    .bg-canvas {
+      position: fixed; inset: 0; z-index: 0;
+      background: radial-gradient(ellipse 70% 50% at 50% 0%, rgba(0,201,167,0.1) 0%, transparent 60%), var(--navy);
+    }
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      padding: 1rem 2rem; background: rgba(10,14,26,0.8);
+      backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,201,167,0.1);
+      display: flex; align-items: center; gap: 1rem;
+    }
+    .back-btn { color: var(--muted); text-decoration: none; font-size: 0.85rem; transition: color 0.2s; }
+    .back-btn:hover { color: var(--emerald); }
+    .nav-title { font-size: 1.1rem; font-weight: 800; color: var(--emerald); }
+
+    main { position: relative; z-index: 1; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem; }
+
+    /* PAGE HEADER */
+    .page-header { text-align: center; margin-bottom: 3rem; }
+    .page-title-fr { font-size: clamp(2rem,5vw,3.5rem); font-weight: 800; }
+    .page-title-ar {
+      font-family: 'Tajawal'; direction: rtl;
+      font-size: clamp(1.4rem,3vw,2.2rem); color: var(--muted); margin-bottom: 0.5rem;
+    }
+    .page-sub { color: var(--muted); font-size: 0.95rem; margin-top: 0.5rem; }
+    .page-sub-ar { font-family: 'Tajawal'; direction: rtl; color: rgba(136,150,179,0.7); font-size: 0.9rem; }
+
+    /* SETUP CARD */
+    .setup-card {
+      background: rgba(26,35,64,0.7); border: 1px solid rgba(0,201,167,0.12);
+      border-radius: 24px; padding: 2.5rem; backdrop-filter: blur(12px);
+      margin-bottom: 2rem;
+    }
+
+    /* STEP INDICATOR */
+    .steps {
+      display: flex; gap: 0.5rem; margin-bottom: 2.5rem; align-items: center;
+    }
+    .step {
+      flex: 1; height: 4px; border-radius: 2px;
+      background: rgba(255,255,255,0.08); transition: background 0.4s;
+    }
+    .step.active { background: var(--emerald); }
+    .step.done { background: rgba(0,201,167,0.4); }
+
+    /* SELECT GROUPS */
+    .select-group { margin-bottom: 2rem; }
+    .select-label {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 0.75rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+      color: var(--emerald); margin-bottom: 1rem;
+    }
+    .label-ar { font-family: 'Tajawal'; font-size: 0.9rem; text-transform: none; letter-spacing: 0; }
+
+    /* OPTION BUTTONS */
+    .options-grid {
+      display: flex; flex-wrap: wrap; gap: 0.6rem;
+    }
+    .opt-btn {
+      padding: 0.6rem 1.1rem;
+      background: rgba(255,255,255,0.04);
+      border: 1.5px solid rgba(255,255,255,0.08);
+      border-radius: 10px;
+      color: var(--white); cursor: pointer; font-family: 'Syne'; font-size: 0.85rem;
+      transition: all 0.25s; white-space: nowrap;
+    }
+    .opt-btn:hover { border-color: rgba(0,201,167,0.4); background: rgba(0,201,167,0.06); }
+    .opt-btn.selected {
+      background: rgba(0,201,167,0.15); border-color: var(--emerald);
+      color: var(--emerald); font-weight: 700;
+    }
+
+    .opt-btn.diff-easy.selected { background: rgba(52,211,153,0.15); border-color: #34d399; color: #34d399; }
+    .opt-btn.diff-normal.selected { background: rgba(245,200,66,0.15); border-color: var(--gold); color: var(--gold); }
+    .opt-btn.diff-hard.selected { background: rgba(255,95,109,0.15); border-color: var(--red); color: var(--red); }
+
+    .hidden { display: none !important; }
+
+    .btn-start {
+      width: 100%; padding: 1.1rem;
+      background: linear-gradient(135deg, var(--emerald), var(--emerald-dark));
+      border: none; border-radius: 14px;
+      color: white; cursor: pointer;
+      font-family: 'Tajawal','Syne'; font-size: 1.1rem; font-weight: 800;
+      transition: all 0.3s; box-shadow: 0 6px 25px rgba(0,201,167,0.3);
+      margin-top: 1.5rem;
+    }
+    .btn-start:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(0,201,167,0.4); }
+    .btn-start:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* QUIZ AREA */
+    .quiz-area { display: none; }
+    .quiz-area.active { display: block; }
+
+    .quiz-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 1.5rem;
+    }
+    .quiz-info { font-size: 0.85rem; color: var(--muted); }
+    .quiz-score { font-size: 1rem; font-weight: 700; color: var(--gold); }
+
+    .progress-bar { height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; margin-bottom: 2rem; overflow: hidden; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, var(--emerald), var(--gold)); border-radius: 3px; transition: width 0.5s ease; }
+
+    .question-card {
+      background: rgba(26,35,64,0.7); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px; padding: 2rem; margin-bottom: 1.5rem;
+      backdrop-filter: blur(12px);
+    }
+    .q-num { font-size: 0.7rem; letter-spacing: 2px; color: var(--emerald); margin-bottom: 0.8rem; font-weight: 700; }
+    .q-text { font-size: 1.1rem; font-weight: 600; line-height: 1.6; margin-bottom: 1.5rem; }
+
+    .answers-grid { display: flex; flex-direction: column; gap: 0.8rem; }
+    .ans-btn {
+      padding: 1rem 1.2rem;
+      background: rgba(255,255,255,0.04);
+      border: 1.5px solid rgba(255,255,255,0.08);
+      border-radius: 12px; text-align: left;
+      color: var(--white); cursor: pointer; font-family: 'Syne'; font-size: 0.9rem;
+      transition: all 0.25s; display: flex; align-items: center; gap: 0.8rem;
+    }
+    .ans-btn:hover:not(:disabled) { border-color: rgba(0,201,167,0.4); background: rgba(0,201,167,0.06); }
+    .ans-btn.correct { border-color: #34d399; background: rgba(52,211,153,0.12); color: #34d399; }
+    .ans-btn.wrong { border-color: var(--red); background: rgba(255,95,109,0.1); color: var(--red); }
+    .ans-letter { width: 28px; height: 28px; border-radius: 8px; background: rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; flex-shrink: 0; }
+
+    .explanation-box {
+      display: none; margin-top: 1.2rem;
+      background: rgba(0,201,167,0.06); border: 1px solid rgba(0,201,167,0.2);
+      border-radius: 12px; padding: 1.2rem;
+    }
+    .explanation-box.show { display: block; }
+    .expl-title { font-size: 0.75rem; letter-spacing: 2px; color: var(--emerald); font-weight: 700; margin-bottom: 0.5rem; }
+    .expl-text { font-size: 0.9rem; color: var(--muted); line-height: 1.7; }
+
+    .btn-next {
+      width: 100%; padding: 0.9rem;
+      background: rgba(0,201,167,0.1); border: 1px solid rgba(0,201,167,0.3);
+      border-radius: 12px; color: var(--emerald);
+      cursor: pointer; font-family: 'Syne'; font-size: 0.95rem; font-weight: 700;
+      transition: all 0.25s; display: none; margin-top: 1rem;
+    }
+    .btn-next:hover { background: rgba(0,201,167,0.2); }
+    .btn-next.show { display: block; }
+
+    /* LOADING */
+    .loading-overlay {
+      display: none; text-align: center; padding: 3rem;
+    }
+    .loading-overlay.show { display: block; }
+    .spinner {
+      width: 50px; height: 50px; margin: 0 auto 1.5rem;
+      border: 3px solid rgba(0,201,167,0.2);
+      border-top-color: var(--emerald);
+      border-radius: 50%; animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* RESULTS */
+    .results-card {
+      display: none; background: rgba(26,35,64,0.85);
+      border: 1px solid rgba(0,201,167,0.2); border-radius: 24px; padding: 2.5rem;
+      text-align: center; backdrop-filter: blur(16px);
+    }
+    .results-card.show { display: block; }
+    .result-emoji { font-size: 4rem; margin-bottom: 1rem; }
+    .result-score { font-size: 3rem; font-weight: 800; color: var(--emerald); }
+    .result-msg { font-size: 1rem; color: var(--muted); margin: 0.5rem 0 1.5rem; }
+    .result-msg-ar { font-family: 'Tajawal'; direction: rtl; }
+    .btn-retry {
+      padding: 0.8rem 2rem; background: linear-gradient(135deg, var(--emerald), var(--emerald-dark));
+      border: none; border-radius: 12px; color: white; cursor: pointer;
+      font-family: 'Syne'; font-size: 0.95rem; font-weight: 700; margin: 0.4rem;
+    }
+    .btn-home {
+      padding: 0.8rem 2rem; background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; color: var(--muted);
+      cursor: pointer; font-family: 'Syne'; font-size: 0.95rem; text-decoration: none;
+      display: inline-block; margin: 0.4rem;
+    }
+    @media(max-width:600px) { .options-grid { gap: 0.5rem; } .opt-btn { font-size: 0.78rem; padding: 0.5rem 0.8rem; } }
+  </style>
+</head>
+<body>
+<div class="bg-canvas"></div>
+<nav>
+  <a href="dashboard.html" class="back-btn">← Accueil · الرئيسية</a>
+  <div class="nav-title">🎯 Quiz & Questions · الاختبارات</div>
+</nav>
+
+<main>
+  <!-- HEADER -->
+  <div class="page-header">
+    <div class="page-title-ar">الاختبارات والأسئلة</div>
+    <div class="page-title-fr">Quiz & Questions</div>
+    <p class="page-sub">Tu es prêt pour ça ?</p>
+    <p class="page-sub-ar">هل أنت مستعد لذلك؟</p>
+  </div>
+
+  <!-- SETUP -->
+  <div class="setup-card" id="setupCard">
+    <div class="steps">
+      <div class="step active" id="s1"></div>
+      <div class="step" id="s2"></div>
+      <div class="step" id="s3"></div>
+      <div class="step" id="s4"></div>
+      <div class="step" id="s5"></div>
+    </div>
+
+    <!-- ANNÉE SCOLAIRE -->
+    <div class="select-group" id="grpAnnee">
+      <div class="select-label">
+        Année scolaire <span class="label-ar">السنة الدراسية</span>
+      </div>
+      <div class="options-grid" id="optAnnee"></div>
+    </div>
+
+    <!-- FILIÈRE (lycée only) -->
+    <div class="select-group hidden" id="grpFiliere">
+      <div class="select-label">Filière <span class="label-ar">الشعبة</span></div>
+      <div class="options-grid" id="optFiliere"></div>
+    </div>
+
+    <!-- MATIÈRE -->
+    <div class="select-group hidden" id="grpMatiere">
+      <div class="select-label">Matière <span class="label-ar">المادة</span></div>
+      <div class="options-grid" id="optMatiere"></div>
+    </div>
+
+    <!-- LEÇON -->
+    <div class="select-group hidden" id="grpLecon">
+      <div class="select-label">Leçon <span class="label-ar">الدرس</span></div>
+      <div class="options-grid" id="optLecon"></div>
+    </div>
+
+    <!-- DIFFICULTÉ -->
+    <div class="select-group hidden" id="grpDiff">
+      <div class="select-label">Difficulté <span class="label-ar">مستوى الصعوبة</span></div>
+      <div class="options-grid">
+        <button class="opt-btn diff-easy" onclick="selectDiff('Facile','هيّن')">😊 Facile · هيّن</button>
+        <button class="opt-btn diff-normal" onclick="selectDiff('Normale','عادي')">🎯 Normale · عادي</button>
+        <button class="opt-btn diff-hard" onclick="selectDiff('Difficile','صعب')">🔥 Difficile · صعب</button>
+      </div>
+    </div>
+
+    <button class="btn-start" id="btnStart" disabled onclick="startQuiz()">
+      Commencer le Quiz · ابدأ الاختبار 🚀
+    </button>
+  </div>
+
+  <!-- LOADING -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+    <p style="color:var(--emerald);font-weight:700;font-size:1.1rem;">Génération des questions...</p>
+    <p style="font-family:'Tajawal';color:var(--muted);margin-top:0.3rem;">جارٍ إنشاء الأسئلة بالذكاء الاصطناعي</p>
+  </div>
+
+  <!-- QUIZ -->
+  <div class="quiz-area" id="quizArea">
+    <div class="quiz-header">
+      <div class="quiz-info" id="quizInfo">Question 1/10</div>
+      <div class="quiz-score" id="quizScore">Score: 0</div>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+    <div id="questionContainer"></div>
+    <button class="btn-next" id="btnNext" onclick="nextQuestion()">Question suivante → التالي</button>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="results-card" id="resultsCard">
+    <div class="result-emoji" id="resultEmoji">🏆</div>
+    <div class="result-score" id="resultScore">8/10</div>
+    <p class="result-msg" id="resultMsg"></p>
+    <p class="result-msg-ar" id="resultMsgAr"></p>
+    <div style="margin-top:1.5rem;">
+      <button class="btn-retry" onclick="resetQuiz()">Recommencer · أعد الاختبار</button>
+      <a href="dashboard.html" class="btn-home">Accueil · الرئيسية</a>
+    </div>
+  </div>
+</main>
+
+<script>
+// ══════════════════════════════════════════
+// ALGERIAN CURRICULUM DATA
+// ══════════════════════════════════════════
+const ANNEES = [
+  {id:'1am', label:'1ère AM', ar:'السنة 1 متوسط', lycee:false},
+  {id:'2am', label:'2ème AM', ar:'السنة 2 متوسط', lycee:false},
+  {id:'3am', label:'3ème AM', ar:'السنة 3 متوسط', lycee:false},
+  {id:'4am', label:'4ème AM (Brevet)', ar:'السنة 4 متوسط (BEM)', lycee:false},
+  {id:'1as', label:'1ère AS', ar:'السنة 1 ثانوي', lycee:true},
+  {id:'2as', label:'2ème AS', ar:'السنة 2 ثانوي', lycee:true},
+  {id:'3as', label:'3ème AS', ar:'السنة 3 ثانوي', lycee:true},
+  {id:'bac', label:'BAC', ar:'البكالوريا', lycee:true},
+];
+
+const FILIERES = {
+  '1as': [
+    {id:'scientifique', label:'Scientifique', ar:'علمي'},
+    {id:'lettres', label:'Lettres & Sciences Humaines', ar:'آداب وعلوم إنسانية'},
+  ],
+  '2as': [
+    {id:'math', label:'Mathématiques', ar:'رياضيات'},
+    {id:'technique', label:'Technique Mathématique', ar:'تقني رياضي'},
+    {id:'scientifique', label:'Sciences Expérimentales', ar:'علوم تجريبية'},
+    {id:'gestion', label:'Gestion & Économie', ar:'تسيير واقتصاد'},
+    {id:'lettres', label:'Lettres & Sciences Humaines', ar:'آداب وعلوم إنسانية'},
+    {id:'langues', label:'Langues Étrangères', ar:'لغات أجنبية'},
+    {id:'philo', label:'Philosophie', ar:'فلسفة'},
+  ],
+  '3as': [
+    {id:'math', label:'Mathématiques', ar:'رياضيات'},
+    {id:'technique', label:'Technique Mathématique', ar:'تقني رياضي'},
+    {id:'scientifique', label:'Sciences Expérimentales', ar:'علوم تجريبية'},
+    {id:'gestion', label:'Gestion & Économie', ar:'تسيير واقتصاد'},
+    {id:'lettres', label:'Lettres & Sciences Humaines', ar:'آداب وعلوم إنسانية'},
+    {id:'langues', label:'Langues Étrangères', ar:'لغات أجنبية'},
+    {id:'philo', label:'Philosophie', ar:'فلسفة'},
+  ],
+  'bac': [
+    {id:'math', label:'Mathématiques', ar:'رياضيات'},
+    {id:'technique', label:'Technique Mathématique', ar:'تقني رياضي'},
+    {id:'scientifique', label:'Sciences Expérimentales', ar:'علوم تجريبية'},
+    {id:'gestion', label:'Gestion & Économie', ar:'تسيير واقتصاد'},
+    {id:'lettres', label:'Lettres & Sciences Humaines', ar:'آداب وعلوم إنسانية'},
+    {id:'langues', label:'Langues Étrangères', ar:'لغات أجنبية'},
+    {id:'philo', label:'Philosophie', ar:'فلسفة'},
+  ],
+};
+
+const MATIERES = {
+  '1am': ['Arabe','Français','Mathématiques','Sciences Naturelles','Histoire-Géographie','Éducation Islamique','Anglais'],
+  '2am': ['Arabe','Français','Mathématiques','Sciences Naturelles','Histoire-Géographie','Éducation Islamique','Anglais'],
+  '3am': ['Arabe','Français','Mathématiques','Sciences Naturelles','Histoire-Géographie','Éducation Islamique','Anglais','Physique-Chimie'],
+  '4am': ['Arabe','Français','Mathématiques','Sciences Naturelles','Histoire-Géographie','Éducation Islamique','Anglais','Physique-Chimie'],
+  '1as_scientifique': ['Arabe','Français','Anglais','Mathématiques','Sciences Naturelles','Physique-Chimie','Histoire-Géographie','Éducation Islamique','Philosophie'],
+  '1as_lettres': ['Arabe','Français','Anglais','Histoire-Géographie','Éducation Islamique','Philosophie','Mathématiques'],
+  '2as_math': ['Arabe','Français','Anglais','Mathématiques','Physique-Chimie','Histoire-Géographie','Éducation Islamique','Philosophie'],
+  '2as_technique': ['Arabe','Français','Anglais','Mathématiques','Physique-Chimie','Histoire-Géographie','Sciences Techniques','Éducation Islamique'],
+  '2as_scientifique': ['Arabe','Français','Anglais','Mathématiques','Sciences Naturelles','Physique-Chimie','Histoire-Géographie','Éducation Islamique','Philosophie'],
+  '2as_gestion': ['Arabe','Français','Anglais','Mathématiques','Économie & Droit','Histoire-Géographie','Éducation Islamique','Comptabilité'],
+  '2as_lettres': ['Arabe','Français','Anglais','Histoire-Géographie','Éducation Islamique','Philosophie','Littérature Arabe'],
+  '2as_langues': ['Arabe','Français','Anglais','Histoire-Géographie','Éducation Islamique','Espagnol / Allemand'],
+  '2as_philo': ['Arabe','Français','Anglais','Histoire-Géographie','Éducation Islamique','Philosophie','Littérature Arabe'],
+  '3as_math': ['Arabe','Français','Anglais','Mathématiques','Physique-Chimie','Histoire-Géographie','Éducation Islamique','Philosophie'],
+  '3as_technique': ['Arabe','Français','Anglais','Mathématiques','Physique-Chimie','Sciences Techniques','Éducation Islamique'],
+  '3as_scientifique': ['Arabe','Français','Anglais','Mathématiques','Sciences Naturelles','Physique-Chimie','Histoire-Géographie','Éducation Islamique','Philosophie'],
+  '3as_gestion': ['Arabe','Français','Anglais','Mathématiques','Économie & Droit','Histoire-Géographie','Éducation Islamique','Comptabilité'],
+  '3as_lettres': ['Arabe','Français','Anglais','Histoire-Géographie','Éducation Islamique','Philosophie','Littérature Arabe'],
+  '3as_langues': ['Arabe','Français','Anglais','Histoire-Géographie','Éducation Islamique','Espagnol / Allemand'],
+  '3as_philo': ['Arabe','Français','Anglais','Histoire-Géographie','Éducation Islamique','Philosophie'],
+  'bac_math': ['Arabe','Français','Anglais','Mathématiques','Physique-Chimie','Histoire-Géographie','Éducation Islamique','Philosophie'],
+  'bac_technique': ['Arabe','Français','Anglais','Mathématiques','Physique-Chimie','Sciences Techniques','Éducation Islamique'],
+  'bac_scientifique': ['Arabe','Français','Anglais','Mathématiques','Sciences Naturelles','Physique-Chimie','Histoire-Géographie','Éducation Islamique','Philosophie'],
+  'bac_gestion': ['Arabe','Français','Anglais','Mathématiques','Économie & Droit','Histoire-Géographie','Éducation Islamique','Comptabilité'],
+  'bac_lettres': ['Arabe','Français','Anglais','Histoire-Géographie','Éducation Islamique','Philosophie','Littérature Arabe'],
+  'bac_langues': ['Arabe','Français','Anglais','Histoire-Géographie','Éducation Islamique','Espagnol / Allemand'],
+  'bac_philo': ['Arabe','Français','Anglais','Histoire-Géographie','Éducation Islamique','Philosophie'],
+};
+
+const LECONS = {
+  // ══════════════════════════════════════
+  // MOYEN (AM) — TOUTES MATIÈRES
+  // ══════════════════════════════════════
+
+  // ── ARABE ──
+  'Arabe_1am': ['النص السردي : فهم المقروء','المبتدأ والخبر','الجملة الفعلية : الفعل الماضي','الفعل المضارع والأمر','ضمائر المتكلم والمخاطب والغائب','الاسم المعرفة والنكرة','الصفة والموصوف','جمع المذكر السالم وجمع المؤنث السالم','أدوات الاستفهام','التعبير الكتابي : وصف مشهد'],
+  'Arabe_2am': ['النص الوصفي','الفاعل والمفعول به','المثنى في الأسماء والأفعال','جمع التكسير','الحال وأنواعها','التمييز','الأسماء الموصولة','أساليب التشبيه','النص الحواري','التعبير الكتابي : وصف شخصية'],
+  'Arabe_3am': ['النص الحجاجي','الإضافة وأنواعها','الفعل المبني للمجهول ونائب الفاعل','أساليب التوكيد (إن، أن، لام التوكيد)','التشبيه والاستعارة','الكناية','النص الإعلامي والتقريري','تقنيات التلخيص','الشعر الجزائري المعاصر','التعبير الكتابي : المقال البسيط'],
+  'Arabe_4am': ['النص الحجاجي المتقدم','أسلوب الشرط وأدواته','الجمل الاعتراضية','البلاغة : المجاز والكناية','الظواهر اللغوية (الحذف، التقديم والتأخير)','النقد الأدبي الأولي','الشعر الكلاسيكي العربي','النثر الفني في الأدب العربي','التعبير الكتابي : المقال الأدبي','تحليل النصوص الأدبية'],
+
+  // ── FRANÇAIS ──
+  'Français_1am': ['Lire et comprendre un texte narratif','La phrase simple (GN + GV)','Le groupe nominal et ses expansions','Les pronoms personnels sujets','Le présent de l\'indicatif (verbes réguliers)','Le présent des verbes irréguliers (être, avoir, aller)','Le passé composé avec avoir','Le passé composé avec être','Les connecteurs chronologiques','La description d\'un personnage'],
+  'Français_2am': ['Le texte biographique et autobiographique','Le discours rapporté direct et indirect','L\'imparfait de l\'indicatif','Le futur simple','Le conditionnel présent','La cause et la conséquence','La comparaison et les comparatifs','La lettre formelle et informelle','Le champ lexical et le champ sémantique','La production d\'un récit de vie'],
+  'Français_3am': ['Le texte argumentatif','La thèse et les arguments','Les articulateurs logiques (concession, opposition)','Le subjonctif présent','Le participe présent et le gérondif','Les figures de style (métaphore, personnification)','L\'article de presse (le reportage)','Le texte explicatif et documentaire','La voix passive','La production d\'un texte argumentatif'],
+  'Français_4am': ['Le discours persuasif et ses procédés','La réfutation et la concession','Le mode conditionnel présent et passé','Les propositions subordonnées relatives','Les propositions subordonnées conjonctives','L\'ironie et la satire dans les textes','Le texte prescriptif et injonctif','L\'analyse d\'une image fixe','La synthèse de documents','La rédaction guidée (lettre, pétition)'],
+
+  // ── ANGLAIS ──
+  'Anglais_1am': ['Greetings and self-introduction','The verb to be (present simple)','Describing people (physical appearance)','Numbers, colors and classroom objects','My school and my classroom','My family members','Food, drinks and meals','Daily routines and telling time','Likes and dislikes','Wh-questions (Who, What, Where, When)'],
+  'Anglais_2am': ['Talking about hobbies and free time','Present simple tense (affirmative, negative, interrogative)','Present continuous tense','Past simple tense (regular verbs)','Past simple tense (irregular verbs)','Describing places (town, country)','Travel and means of transport','Health, body parts and ailments','Comparative and superlative adjectives','Modal verbs (can, must, should)'],
+  'Anglais_3am': ['Past continuous vs past simple','Future tenses (will and going to)','First conditional (If + present, will)','Second conditional (If + past, would)','Passive voice (simple tenses)','Reported speech (statements)','Reported speech (questions)','Environment and ecology vocabulary','Media and technology','Writing an argumentative paragraph'],
+  'Anglais_4am': ['Third conditional (If + past perfect, would have)','Reported speech advanced','Passive voice (advanced tenses)','Modals of deduction (must, can\'t, might)','Gerunds and infinitives','Formal and informal writing (letters, emails)','Reading comprehension strategies','Algerian culture and history in English','Science and technology in English','Revision for BEM examination'],
+
+  // ── MATHÉMATIQUES ──
+  'Mathématiques_1am': ["الأعداد الصحيحة الطبيعية والترقيم", "الجمع والطرح", "الضرب وخصائصه", "القسمة الإقليدية", "الكسور البسيطة", "الأعداد العشرية", "الزوايا والمستقيمات", "المضلعات (المثلث، المستطيل، المربع)", "المحيط والمساحة للأشكال المستوية", "التماثل المحوري"],
+  'Mathématiques_2am': ["الأعداد الصحيحة النسبية", "الكسور والأعداد العشرية", "التناسب والنسبة المئوية", "معادلات الدرجة الأولى بمجهول واحد", "المتراجحات البسيطة", "المثلثات: خصائصها ورسمها", "نظرية طاليس", "الأشكال الرباعية الخاصة (المعين، متوازي الأضلاع)", "المساحة وحجم المجسمات", "الإحصاء"],
+  'Mathématiques_3am': ["قوى عدد (الأس الصحيح)", "الجذر التربيعي", "التوسيع والتحليل إلى عوامل", "معادلات الدرجة الأولى", "منظومات المعادلتين بمجهولين", "الدوال الخطية والتآلفية", "نظرية فيثاغورث وعكسها", "المثلثية في المثلث القائم", "التحويلات الهندسية (الانسحاب، الدوران، التشابه)", "الإحصاء والاحتمالات"],
+  'Mathématiques_4am': ["الأعداد النسبية والعمليات", "القوى والجذور (مراجعة)", "متراجحات الدرجة الأولى", "منظومات المعادلات (التعويض، الجمع)", "المتجهات والانسحاب", "نظريتا طاليس وفيثاغورث (مراجعة وتطبيقات)", "المثلثية المتقدمة (جا، جتا، ظا)", "مفهوم الدالة والتمثيل البياني", "الإحصاء الوصفي", "الاحتمالات (تعريف وحساب)"],
+
+  // ── SCIENCES NATURELLES ──
+  'Sciences Naturelles_1am': ["الخلية: الوحدة البنيوية والوظيفية للكائن الحي", "تغذية النباتات (التركيب الضوئي)", "تغذية الحيوانات", "الهضم: الأعضاء والعملية", "التنفس عند الكائنات الحية", "الدورة الدموية", "التكاثر النباتي (الجنسي واللاجنسي)", "التكاثر عند الحيوانات", "الأنظمة البيئية وسلسلة الغذاء", "حماية البيئة"],
+  'Sciences Naturelles_2am': ["تنظيم جسم الإنسان (الأجهزة والأجهزة العضوية)", "الهيكل العظمي والعضلات: دورهما وعملهما", "الجهاز العصبي والمنعكسات", "أعضاء الحواس", "الأمراض المعدية والنظافة", "التطعيم والمناعة الطبيعية والاصطناعية", "التكاثر البشري", "البلوغ والنمو", "الكائنات الدقيقة النافعة والضارة", "التنوع البيولوجي وحمايته"],
+  'Sciences Naturelles_3am': ["الخلية حقيقية النواة وبدائيتها (مقارنة)", "التركيب الضوئي: المعادلة والعوامل", "التنفس الخلوي الهوائي", "الانقسام الخيطي: مراحله ودوره", "الانقسام الاختزالي والإخصاب", "قوانين مندل (السيادة، الانعزال)", "الطفرات الجينية", "نظرية التطور (داروين)", "تصنيف الكائنات الحية", "الأنظمة البيئية والدورات الجيوكيميائية"],
+  'Sciences Naturelles_4am': ["التكاثر الخلوي (الانقسام الخيطي المتقدم)", "الوراثة البشرية والأمراض الوراثية", "الهندسة الوراثية والكائنات المعدلة جينياً", "الجهاز الصماوي والهرمونات", "التغذية والصحة (التوازن الغذائي)", "أمراض القلب والأوعية الدموية (الوقاية)", "الجهاز المناعي المتقدم", "تأثير الإنسان على التنوع البيولوجي", "إدارة الموارد الطبيعية", "التنمية المستدامة في الجزائر"],
+
+  // ── HISTOIRE-GÉOGRAPHIE ──
+  'Histoire-Géographie_1am': ["عصور ما قبل التاريخ في الجزائر (تاسيلي ن أجر، الإنسان العاقل)", "الحضارات الأولى (بلاد الرافدين، مصر القديمة)", "نوميديا والمملكة البربرية (ماسينيسا)", "الفينيقيون وقرطاج في شمال أفريقيا", "الفتح الروماني لشمال أفريقيا", "التجارة القافلية في العصور القديمة", "تضاريس الجزائر ومناخها", "الموارد الطبيعية للجزائر", "سكان الجزائر (التوزيع والكثافة)", "المدن الجزائرية وتطورها"],
+  'Histoire-Géographie_2am': ["ظهور الإسلام وأركانه", "انتشار الإسلام (الفتوحات والحضارة)", "الجزائر في ظل الأسرات البربرية (الزيريون، الحماديون)", "الفتح العثماني وإيالة الجزائر", "الحروب الصليبية ونتائجها", "عصر النهضة في أوروبا (القرنان 15 و16)", "الاكتشافات الجغرافية الكبرى", "تجارة الرقيق والتجارة المثلثة", "جغرافية أفريقيا (البيئات الطبيعية والبشرية)", "المغرب العربي: الوحدة الجغرافية والتنوع"],
+  'Histoire-Géographie_3am': ["الاستعمار الفرنسي للجزائر (1830)", "أشكال الاستغلال الاستعماري (نزع الأراضي)", "المقاومة الجزائرية (المقراني، فاطمة ن سومر، أحمد باي)", "الحرب العالمية الأولى (الأسباب، المجريات، النتائج)", "تطور الحركة الوطنية (نجم شمال أفريقيا، حزب الشعب، حركة انتصار الحريات الديمقراطية)", "الحرب العالمية الثانية ونتائجها", "حركة تحرر آسيا وأفريقيا من الاستعمار", "التنمية الاقتصادية العالمية", "المنظمات الدولية (الأمم المتحدة، جامعة الدول العربية)", "التبادل التجاري والعولمة"],
+  'Histoire-Géographie_4am': ["اندلاع الثورة الجزائرية (1 نوفمبر 1954)", "مراحل ومعارك حرب التحرير الوطني", "مؤتمر الصومام (1956)", "اتفاقيات إيفيان والاستقلال (5 جويلية 1962)", "الحرب الباردة (الولايات المتحدة مقابل الاتحاد السوفيتي، 1947-1991)", "حركة عدم الانحياز والعالم الثالث", "الأزمات العالمية بعد 1945 (كوبا، فيتنام، الشرق الأوسط)", "العولمة الاقتصادية والثقافية", "البيئة والتنمية المستدامة", "الجزائر في العالم العربي والأفريقي والدولي"],
+
+  // ── ÉDUCATION ISLAMIQUE ──
+  'Éducation Islamique_1am': ["أركان الإيمان الستة", "أركان الإسلام الخمسة", "الطهارة وأنواعها (الوضوء، الغسل، التيمم)", "الصلاة : أوقاتها وشروطها وأركانها", "الزكاة : تعريفها وشروطها وأنواعها", "الصوم : تعريفه وأحكامه وحكمته", "السيرة النبوية : مولد النبي ﷺ والبعثة", "السيرة النبوية : الهجرة إلى المدينة", "الأخلاق الإسلامية (الصدق، الأمانة، بر الوالدين)", "القرآن الكريم : التلاوة والتجويد الأساسي"],
+  'Éducation Islamique_2am': ['العبادات في الإسلام وحكمتها','الحج : أحكامه ومناسكه وحكمته','الجهاد في الإسلام وضوابطه الشرعية','الصحابة الكرام (أبو بكر، عمر، عثمان، علي رضي الله عنهم)','الخلافة الراشدة وإنجازاتها','الأخلاق المحمودة (الكرم، الوفاء، العدل)','الإسلام والتعامل مع الآخرين','حقوق الإنسان في الإسلام','العلماء المسلمين وإسهاماتهم في الحضارة','قيم الإسلام في الحياة اليومية'],
+  'Éducation Islamique_3am': ['مفهوم العقيدة الإسلامية وأهميتها','التوحيد وأنواعه (توحيد الربوبية، الألوهية، الأسماء والصفات)','الشرك وأنواعه وخطره','الفقه الإسلامي : مصادر الشريعة (القرآن، السنة، الإجماع، القياس)','الحلال والحرام في الإسلام','المعاملات الإسلامية (البيع، الشراء، العقود)','الإسلام والمجتمع (الأسرة، الجوار، الصداقة)','الحضارة الإسلامية وإسهاماتها في العلوم','الوحدة الإسلامية والتسامح الديني','الإسلام والبيئة (المحافظة على الطبيعة)'],
+  'Éducation Islamique_4am': ['مفهوم الإسلام الشامل (الدين والدنيا)','الإسلام والسياسة (الشورى، العدل، الحكم الرشيد)','الإسلام والاقتصاد (الربا، الزكاة، المعاملات)','حقوق المرأة في الإسلام','حقوق الطفل في الإسلام','الإسلام والتعايش مع غير المسلمين','الإعجاز العلمي في القرآن الكريم','السنة النبوية وعلوم الحديث','الفقه المقارن : مسائل مختارة','الهوية الإسلامية والتحديات المعاصرة'],
+
+  // ── PHYSIQUE-CHIMIE ──
+  'Physique-Chimie_3am': ["حالات المادة والتحولات", "الذوبان والخلائط (متجانسة وغير متجانسة)", "الضوء وخصائصه (الانتشار المستقيم)", "انعكاس الضوء والمرايا", "انكسار الضوء", "الصوت: الإنتاج، الانتشار والخصائص", "مفهوم القوة والتوازن", "الضغط في الموائع (مبدأ باسكال)", "الدوائر الكهربائية البسيطة (التسلسل، التفرع)", "شدة التيار والتوتر الكهربائي (قوانين أوم)"],
+  'Physique-Chimie_4am': ["الذرة: البنية ونموذج بور", "الجدول الدوري للعناصر", "الأيونات والروابط الأيونية", "المحاليل المائية والموصلية الكهربائية", "التفاعلات الكيميائية: المعادلة الحصيلة", "الأكسدة والاحتراق", "الحركية: الحركة المستقيمة المنتظمة", "القوى والديناميكا (قوانين نيوتن)", "الطاقة الميكانيكية (الحركية، الكامنة)", "الدوائر في التيار المتردد والنشاط الإشعاعي (مقدمة)"],
+
+  // ══════════════════════════════════════
+  // LYCÉE — TRONC COMMUN (1AS)
+  // ══════════════════════════════════════
+
+  // ── ARABE 1AS ──
+  'Arabe_1as_scientifique': ["النص الأدبي وقراءته وتحليله", "الجملة الاسمية المتقدمة وعلامات الإعراب", "الفعل المعتل وتصريفاته", "أساليب التوكيد والنفي والاستفهام المتقدمة", "البلاغة: التشبيه والاستعارة والكناية", "نقد النص الأدبي وتذوقه", "الشعر الجزائري الحديث: أعلامه وخصائصه", "النثر الأدبي الجزائري المعاصر", "التعبير الكتابي: المقال الأدبي والنقدي", "قواعد الإملاء والكتابة الصحيحة"],
+  'Arabe_1as_lettres': ["النص الأدبي المتقدم: قراءة وتحليل ونقد", "علم العروض: البحور الشعرية الأساسية", "الإعراب التفصيلي للجمل المركبة", "البلاغة المتقدمة: الجناس، الطباق، المقابلة", "الشعر الجاهلي: خصائصه وأغراضه", "الأدب في صدر الإسلام", "أدب العصر الأموي وخصائصه", "تحليل النص النثري القديم", "الأدب الجزائري: من العهد العثماني إلى الاستقلال", "التعبير الكتابي المتقدم: الدراسة الأدبية"],
+
+  // ── FRANÇAIS 1AS ──
+  'Français_1as_scientifique': ['Le texte argumentatif : structure et stratégies','La dissertation : méthodologie et rédaction','L\'explication de texte littéraire','Les figures de style avancées (ironie, antithèse, euphémisme)','Le roman du XXème siècle (Camus, Sartre)','La poésie moderne (Apollinaire, Prévert)','Le théâtre contemporain','La langue et le style : les registres de langue','La communication écrite et orale efficace','Préparation aux épreuves du BAC'],
+  'Français_1as_lettres': ['Le texte littéraire : analyse approfondie','Les mouvements littéraires (classicisme, romantisme, réalisme)','La poésie : versification et figures poétiques','Le roman : personnages, narration, espace-temps','Le théâtre : dramaturgie et mise en scène','La critique littéraire : méthodes et approches','L\'argumentation avancée (réfutation, concession)','La dissertation littéraire','L\'explication de texte (méthode complète)','La francophonie et la littérature algérienne d\'expression française'],
+
+  // ── ANGLAIS 1AS ──
+  'Anglais_1as_scientifique': ['Advanced reading comprehension strategies','Grammar review : all tenses','The passive voice (advanced)','Reported speech (advanced)','Conditional sentences (all types)','Essay writing (argumentative and discursive)','Scientific English and technical vocabulary','Environmental issues and global warming','Media literacy and critical thinking','Revision for the Baccalaureate exam'],
+  'Anglais_1as_lettres': ['Literature in English : short stories and novels','Advanced grammar and style','Poetry analysis in English','Writing for different purposes (formal, informal)','British and American culture','Debating and public speaking in English','Critical analysis of texts','Translation strategies (Arabic-English-French)','Contemporary global issues in English','Advanced essay writing techniques'],
+
+  // ── HISTOIRE-GÉOGRAPHIE 1AS ──
+  'Histoire-Géographie_1as_scientifique': ["العالم في مطلع القرن العشرين", "الحرب العالمية الأولى: الأسباب، المجريات، الحصيلة", "الثورة الروسية (1917) ونتائجها", "صعود الأنظمة الشمولية (الفاشية، النازية، الستالينية)", "الأزمة الاقتصادية العالمية 1929", "الحرب العالمية الثانية: مراحلها ونتائجها", "التحرر من الاستعمار والنظام العالمي الجديد", "الحرب الباردة (1947-1991): الكتل والأزمات", "العالم العربي بعد 1945 والقضية الفلسطينية", "جغرافية أوروبا والقوى الكبرى في العالم"],
+  'Histoire-Géographie_1as_lettres': ["العالم في مطلع القرن العشرين", "الحرب العالمية الأولى", "الثورة الروسية ونتائجها", "الأنظمة الشمولية الأوروبية وأيديولوجياتها", "أزمة 1929 وتداعياتها", "الحرب العالمية الثانية", "التحرر من الاستعمار في آسيا وأفريقيا", "الحرب الباردة وتجلياتها", "العالم الثالث وحركة عدم الانحياز", "الجغرافية العالمية: المناطق الكبرى والرهانات"],
+
+  // ── ÉDUCATION ISLAMIQUE 1AS ──
+  'Éducation Islamique_1as_scientifique': ["مفهوم الإسلام الشامل وخصائصه", "مصادر التشريع الإسلامي وأدلته", "الإسلام والعلم (الإعجاز العلمي في القرآن والسنة)", "الإسلام والأخلاق في المجتمع المعاصر", "الفقه الإسلامي : المعاملات المالية الحديثة", "حقوق الإنسان في الإسلام والمواثيق الدولية", "الإسلام والتعايش الحضاري", "قضايا الأسرة في الإسلام", "السيرة النبوية : الدروس والعبر", "الهوية الجزائرية الإسلامية في مواجهة العولمة"],
+  'Éducation Islamique_1as_lettres': ["الإسلام والفكر الإنساني", "الحضارة الإسلامية وإسهاماتها في الفكر العالمي", "قضايا العقيدة في مواجهة الفكر المعاصر", "الأخلاق الإسلامية وأثرها في بناء الشخصية", "الإسلام والديمقراطية", "الإسلام والبيئة والتنمية المستدامة", "الإسلام ومواجهة الإرهاب والتطرف", "الوحدة الإسلامية والتضامن الإنساني", "الفقه المعاصر : مسائل مستجدة", "الإسلام في القرن الحادي والعشرين"],
+
+  // ── PHILOSOPHIE 1AS ──
+  'Philosophie_1as_scientifique': ["ما هي الفلسفة؟ المنهج الفلسفي", "الوعي واللاوعي (فرويد والتحليل النفسي)", "الإدراك ومعرفة العالم الواقعي", "اللغة: أداة الفكر والتواصل", "الحقيقة ومعاييرها (المنطقية، العلمية، الفلسفية)", "المنطق الصوري (القياس والاستدلال الاستنباطي)", "الحرية والحتمية", "الأخلاق وعلم الأخلاق", "العلم ومناهجه (الاستقراء، الاستنباط، الفرضية)", "علم الجمال: الجمال والفن"],
+  'Philosophie_1as_lettres': ["مقدمة في الفلسفة القديمة (ما قبل سقراط)", "أفلاطون ونظرية المُثُل (الجمهورية، مثل الكهف)", "أرسطو: المنطق والميتافيزيقا", "الفلسفة الوسيطة (الفارابي، ابن رشد، ابن الرشد)", "ديكارت والعقلانية (الكوجيتو، الشك المنهجي)", "هيوم والتجريبية (الانطباعات والأفكار)", "كانط: نقد العقل المحض", "هيغل والجدل (الأطروحة، النقيض، التركيب)", "ماركس والفلسفة الاجتماعية", "الوجودية (سارتر، كامو)"],
+
+  // ── MATHÉMATIQUES 1AS ──
+  'Mathématiques_1as_scientifique': ["مجموعات الأعداد (ن، ص، ق، ح) والعمليات", "الدوال العددية: تعريف، مجال، تمثيل", "الدوال الشائعة (التآلفية، التربيعية، العكسية، القيمة المطلقة)", "المثلثية: الراديان، الدائرة المثلثية، القيم الملحوظة", "الصيغ المثلثية (الجمع، المضاعفة)", "المتجهات في المستوى: العمليات والخصائص", "حاصل الضرب القياسي وتطبيقاته", "المستقيمات والمستويات في الفضاء", "المتتاليات العددية (الحسابية والهندسية)", "الإحصاء الوصفي والاحتمالات"],
+  'Mathématiques_1as_lettres': ["مجموعات الأعداد والعمليات الأساسية", "الدوال التآلفية والتربيعية", "التناسب والنسب المئوية المتقدمة", "منظومات المعادلات والمتراجحات", "المثلثية الأساسية", "المتجهات في المستوى", "المتتاليات الحسابية البسيطة", "الإحصاء: الوسط، الوسيط، المنوال", "الاحتمالات (حساب أساسي)", "تطبيقات عملية للرياضيات"],
+
+  // ── PHYSIQUE-CHIMIE 1AS Scientifique ──
+  'Physique-Chimie_1as_scientifique': ["القياسات وعدم اليقين التجريبي", "الضوء: الطبيعة الموجية والجسيمية", "انكسار الضوء وتشتته (قانون سنيل-ديكارت)", "العدسات الرقيقة المقربة والمبعدة", "ميكانيكا النقطة: الحركية (المتحرك بحركة مستقيمة منتظمة، متسارعة)", "قوانين نيوتن (الأول، الثاني، الثالث)", "الشغل والطاقة الميكانيكية (الطاقة الحركية، الكامنة)", "الدوائر الكهربائية في التيار المستمر (قوانين كيرشوف)", "التحولات الكيميائية: الحصيلة وعلم القياس الكيميائي", "مقدمة في المحاليل المائية والتفاعلات الحمضية القاعدية"],
+
+  // ── SCIENCES NATURELLES 1AS Scientifique ──
+  'Sciences Naturelles_1as_scientifique': ["جزيئة الحمض النووي: البنية (الحلزون المزدوج، النيوكليوتيدات) والدور", "تضاعف الحمض النووي: الآلية شبه المحافظة", "النسخ: تركيب الرنا المرسال", "الترجمة: تركيب البروتينات (الريبوسوم، الكودونات)", "تنظيم التعبير الجيني", "الانقسام الاختزالي: مراحله ودوره في التنوع الجيني", "قوانين مندل: الهجين الأحادي والثنائي", "الشذوذات الكروموسومية (التثلث الصبغي 21 إلخ)", "علم المناعة: دفاعات الجسم (المناعة الفطرية والمكتسبة)", "تطبيقات علم المناعة (التطعيم، زراعة الأعضاء)"],
+
+  // ══════════════════════════════════════
+  // LYCÉE — 2AS TOUTES FILIERES
+  // ══════════════════════════════════════
+
+  // ── MATHÉMATIQUES 2AS ──
+  'Mathématiques_2as_math': ["خصائص الدوال (الزوجية، التناقصية، الدورية)", "النهايات والاتصال", "الاشتقاق: تعريف، قواعد، تطبيقات", "الدراسة الكاملة للدوال ورسم المنحنيات", "الدوال المثلثية (جا، جتا، ظا ومشتقاتها)", "المتتاليات العددية المتقدمة (التقارب، التباعد)", "الأعداد المركبة: الشكل الجبري والمثلثي", "الاحتمالات الشرطية (صيغة بايز)", "الهندسة التحليلية (المستقيمات، القطوع المخروطية)", "مقدمة في الأصول والتكاملات"],
+  'Mathématiques_2as_scientifique': ["خصائص الدوال العامة", "النهايات والاتصال", "الاشتقاق وتطبيقاته (التغيرات، النهايات الصغرى)", "دراسة الدوال (جدول التغيرات، المنحنى)", "دوال اللوغاريتم والأسية (مقدمة)", "المثلثية المتقدمة (صيغ التحويل)", "المتتاليات العددية (حسابية وهندسية متقدمة)", "الاحتمالات (الإحصاء، قانون ذي الحدين)", "الهندسة في الفضاء (متجهات، مستويات، مستقيمات)", "الإحصاء بمتغيرين (الانحدار الخطي)"],
+  'Mathématiques_2as_technique': ["الدوال وخصائصها", "الاشتقاق وتطبيقاته التقنية", "المتتاليات العددية وتطبيقاتها", "المعادلات التفاضلية من الدرجة الأولى", "المثلثية وتطبيقاتها الصناعية", "الأعداد المركبة وتطبيقاتها", "الهندسة التحليلية المستوية", "الإحصاء التطبيقي في الصناعة", "الاحتمالات وتطبيقها", "الحساب: القاسم المشترك الأكبر، المضاعف المشترك الأصغر، التطابقات"],
+  'Mathématiques_2as_gestion': ["الدوال والرسوم البيانية الاقتصادية", "التناسب والنسب المئوية المتقدمة", "المتتاليات الحسابية والهندسية (التطبيقات المالية)", "الدوال التآلفية والتربيعية", "الاشتقاق البسيط وتطبيقاته الاقتصادية", "منظومات المعادلات المطبقة على الاقتصاد", "الإحصاء الوصفي المتقدم", "المؤشرات والمعدلات (مؤشر الأسعار، سعر الفائدة)", "الاحتمالات المطبقة على التسيير", "مقدمة في الرياضيات المالية"],
+  'Mathématiques_2as_lettres': ["الدوال الأساسية وتمثيلاتها", "المعادلات والمتراجحات", "التناسب والنسب المئوية", "الإحصاء الوصفي", "الاحتمالات الأساسية", "المتتاليات الحسابية البسيطة", "الهندسة المستوية (مراجعة وتعمق)", "منظومات المعادلات", "الدوال التآلفية وتفسيرها", "تطبيقات عملية للرياضيات في الحياة اليومية"],
+
+  // ── PHYSIQUE-CHIMIE 2AS ──
+  'Physique-Chimie_2as_math': ["الميكانيكا المتقدمة: الحركية (المتحرك بحركة مستقيمة منتظمة، متسارعة، المقذوفات)", "ديناميكا الدوران (عزم القصور الذاتي، نظرية عزم الكمية الحركية)", "التجاذب الكوني وقوانين كبلر", "الموجات الميكانيكية والضوئية (الحيود، التداخل)", "مفعول دوبلر وتطبيقاته", "الكيمياء العضوية المتقدمة (تحديد المركبات)", "البوليمرات والجزيئات الكبيرة", "النشاط الإشعاعي: الأنواع، قانون التناقص، التطبيقات", "التفاعلات النووية (الانشطار، الاندماج)", "المحاليل الحمضية القاعدية والمعايرات"],
+  'Physique-Chimie_2as_scientifique': ["الميكانيكا: حركة المجسمات والموائع", "الحركات الدائرية وإطلاق الأقمار الاصطناعية", "البندول والتذبذبات الميكانيكية", "التذبذبات الكهربائية الحرة والمجبرة", "الموجات الكهرومغناطيسية والضوء (التداخل، الحيود)", "الكيمياء العضوية: العائلات الوظيفية", "الكحولات وتفاعلاتها", "الأحماض الكربوكسيلية والإسترات", "المحاليل الحاجزة والمعايرات", "الحركية الكيميائية (سرعة التفاعل، الحفاز)"],
+  'Physique-Chimie_2as_technique': ["حركية المجسمات (الانسحاب، الدوران)", "ديناميكا الأنظمة الميكانيكية", "الشغل والطاقة في الأنظمة التقنية", "الديناميكا الحرارية (المبدأ الأول والثاني)", "الكهرباء الصناعية (المحركات، المولدات)", "الدوائر الهيدروليكية والهوائية (أسس)", "الموجات وتطبيقاتها التقنية", "كيمياء المواد (المعادن، السبائك، البلاستيك)", "التآكل وحماية المواد", "القياس والأدوات الصناعية"],
+
+  // ── SCIENCES NATURELLES 2AS ──
+  'Sciences Naturelles_2as_scientifique': ["فيزيولوجيا التغذية: الهضم والامتصاص المعوي", "فيزيولوجيا التنفس: تبادل الغازات ونقل الأكسجين", "فيزيولوجيا الدورة الدموية: القلب والدورة", "تنظيم الجهاز العصبي المركزي والمحيطي", "انتقال النبضة العصبية (جهد الفعل، المشابك)", "التنظيم الهرموني (الغدد الصماء، الهرمونات)", "التنسيق العصبي الهرموني (التوازن الداخلي)", "علم البيئة: المناخات الحيوية، العلاقات بين الكائنات", "ديناميكية المجتمعات والتطور", "البيولوجيا الجزيئية: تفاعل البوليميراز المتسلسل، الرحلان الكهربائي، الاستنساخ"],
+
+  // ── PHILOSOPHIE 2AS ──
+  'Philosophie_2as_math': ["العقل وقدراته", "الاستدلال الرياضي (البرهان، الإثبات، الدحض)", "الفرضية والنظرية العلمية", "السببية والحتمية في العلوم", "الحقيقة الرياضية والحقيقة التجريبية", "التقنية والعلم (الأداتية)", "التقدم العلمي (كون: الثورات العلمية، بوبر: القابلية للتكذيب)", "فلسفة العلوم (الإبستيمولوجيا)", "أخلاقيات البحث العلمي", "حرية العالِم ومسؤوليته"],
+  'Philosophie_2as_scientifique': ["المنهج العلمي (الملاحظة، الفرضية، التجريب)", "الكائن الحي وخصائصه (تعريف الحياة)", "التطور والتحوّلية (داروين، لامارك، الوراثة الحديثة)", "الرهانات الأخلاقية للبيولوجيا والطب", "الوراثة وعلم الأخلاق الحيوي (الكائنات المعدلة، الاستنساخ)", "الفيلسوف البيئي (العلاقة إنسان-طبيعة)", "فلسفة الطب (الصحة، المرض، العلاج)", "العلوم والمعتقدات (الدين، الخرافة، العلم)", "الوعي والدماغ (علم الأعصاب والفلسفة)", "فلسفة الطبيعة والبيئة"],
+  'Philosophie_2as_lettres': ["اللغة: وظائف التواصل وحدوده", "الفن وعلم الجمال (الجميل، الفن المعاصر)", "الدين والفلسفة (الإيمان والعقل)", "الدولة والسلطة السياسية (الشرعية، أشكال الحكم)", "العدالة والقانون (القانون الطبيعي، القانون الوضعي)", "التاريخ ومعناه (التقدم، الدورات، الكوارث)", "الثقافة والحضارة (المركزية العرقية، النسبية الثقافية)", "الهوية الشخصية والجماعية", "حقوق الإنسان وعالميتها", "العولمة ورهاناتها الفلسفية"],
+  'Philosophie_2as_philo': ["مقدمة في الفلسفة: التعريفات والمنهج", "المنطق الصوري وغير الصوري", "الميتافيزيقا: الكينونة، الوجود، الجوهر", "نظرية المعرفة (الإبستيمولوجيا)", "الفلسفة الأخلاقية (الأخلاق، الواجب، النفعية)", "الفلسفة السياسية (الدولة، السلطة، الشرعية)", "فلسفة التاريخ", "فلسفة اللغة", "علم الجمال الفلسفي", "فلسفة الأديان"],
+  'Philosophie_2as_technique': ["التقنية والفلسفة", "الرشاشية التقنية والعلمية", "الإنسان والآلة (الإنسانية والتكنولوجيا)", "فلسفة العمل (ماركس، هيغل)", "الأخلاق في العلوم والتقنيات", "الفلسفة البيئية", "الحرية والضرورة", "الحقيقة في العلم", "المجتمع الصناعي ورهاناته", "الفلسفة والمواطنة"],
+
+  // ── HISTOIRE-GÉOGRAPHIE 2AS ──
+  'Histoire-Géographie_2as_math': ["القوى العالمية الكبرى بعد 1945", "الحرب الباردة: الأزمات والمواجهات", "حركة التحرر من الاستعمار في آسيا وأفريقيا", "الجزائر المستقلة: البناء الوطني (1962-1988)", "العالم العربي: الجيوسياسة والصراعات", "العولمة الاقتصادية (الشركات متعددة الجنسيات، الاستثمار الأجنبي المباشر، منظمة التجارة العالمية)", "الجغرافية الاقتصادية العالمية (الدول المتطورة والنامية)", "الموارد الطاقوية العالمية (النفط، الغاز الطبيعي)", "الرهانات البيئية العالمية", "الجزائر في الاقتصاد العالمي"],
+  'Histoire-Géographie_2as_scientifique': ["القوى العالمية الكبرى بعد 1945", "الحرب الباردة وأزماتها (كوبا، كوريا، فيتنام)", "التحرر من الاستعمار وولادة العالم الثالث", "الجزائر المستقلة: المراحل الكبرى (1962-1999)", "العالم العربي والقضية الفلسطينية", "العولمة: المزايا والحدود", "جغرافية الموارد الطبيعية", "المشكلات البيئية العالمية (الاحترار، التصحر)", "الديموغرافيا العالمية وتحدياتها", "الجزائر: الجغرافيا الاقتصادية والبشرية"],
+  'Histoire-Géographie_2as_gestion': ["العلاقات الاقتصادية الدولية", "عولمة التبادلات التجارية", "المنظمات الاقتصادية الدولية (صندوق النقد الدولي، منظمة التجارة العالمية، البنك الدولي)", "الاقتصاد الجزائري: الهيكل، الموارد والتحديات", "جغرافية اقتصادية لأفريقيا", "التكامل الاقتصادي الإقليمي (الاتحاد الأوروبي، الاتحاد الأفريقي، جامعة الدول العربية)", "الموارد الطبيعية للجزائر (الهيدروكربونات، المناجم)", "الديموغرافيا الجزائرية وتداعياتها", "التحضر في الجزائر والعالم", "التنمية المستدامة والاقتصاد الأخضر"],
+  'Histoire-Géographie_2as_lettres': ["العالم بعد الحرب العالمية الثانية", "الحرب الباردة وتجلياتها الثقافية والأيديولوجية", "التحرر من الاستعمار وظهور العالم الثالث", "الجزائر المستقلة وبناء الدولة", "العالم العربي: الثقافة والتاريخ والجيوسياسة", "العولمة الثقافية ورهاناتها", "الجغرافيا البشرية العالمية", "حركات الهجرة العالمية", "الهوية والثقافة في العالم المعاصر", "البحر الأبيض المتوسط: فضاء للتواصل والتبادل"],
+  'Histoire-Géographie_2as_langues': ["تاريخ العالم المعاصر (لمحة عامة)", "الحضارات الكبرى وإرثها", "الاستعمار والتحرر من الاستعمار", "الحرب الباردة باختصار", "الجزائر: التاريخ والجغرافيا بإيجاز", "العولمة الثقافية", "جغرافية بلد اللغة المدروسة (إسبانيا/ألمانيا)", "تاريخ بلد اللغة المدروسة: العصر الحديث", "جغرافية أوروبا", "التبادلات الثقافية بين الجزائر وأوروبا"],
+  'Histoire-Géographie_2as_philo': ["العالم المعاصر: الرهانات السياسية والفلسفية", "الثورات وأسبابها (التاريخية والفلسفية)", "الديمقراطية: التاريخ والأشكال", "العولمة ونقدها", "الجيوسياسة العالمية المعاصرة", "الجزائر في السياق الجيوسياسي الإقليمي", "النزاعات المسلحة: الأسباب والحلول", "حقوق الإنسان: التاريخ والتحديات المعاصرة", "جغرافية الفقر والتنمية", "التعليم والثقافة والمجتمع في العالم المعاصر"],
+  'Histoire-Géographie_2as_technique': ["تاريخ التقنيات والصناعة", "الثورة الصناعية ونتائجها", "الجغرافيا الصناعية العالمية", "الموارد الطاقوية: التوزيع العالمي والتحديات", "الصناعة الجزائرية: الهيكل والرهانات", "العولمة الصناعية", "التقنيات الجديدة والجغرافيا الاقتصادية", "البيئة والصناعة (التلوث، التصميم البيئي)", "المناطق الصناعية في الجزائر", "التطور التكنولوجي والمجتمع"],
+
+  // ── ARABE 2AS ──
+  'Arabe_2as_math': ["النص الأدبي المتقدم: قراءة نقدية", "علم العروض: البحور الشعرية وتطبيقاتها", "البلاغة المتقدمة: السجع والجناس والطباق", "الشعر العباسي: المتنبي وأبو تمام", "النثر الفني العربي القديم", "النقد الأدبي: المدارس والمناهج", "أساليب التعبير العلمي والتقني باللغة العربية", "الكتابة الأكاديمية: المقال والتقرير", "الخطاب الحجاجي المتقدم", "قضايا اللغة العربية في العصر الحديث"],
+  'Arabe_2as_scientifique': ["النص العلمي وأسلوبه", "لغة العلوم والتقنية بالعربية", "النص الأدبي وعلاقته بالعلوم", "البلاغة في خدمة التعبير العلمي", "أساليب الشرح والتفسير في اللغة العربية", "الترجمة العلمية (مبادئ أساسية)", "الكتابة التقنية والعلمية", "النقد والتحليل في النصوص المتخصصة", "قضايا اللغة العربية والعلوم", "الهوية الثقافية واللغة"],
+  'Arabe_2as_gestion': ["لغة الأعمال والاقتصاد بالعربية", "المراسلات التجارية والإدارية", "أسلوب التقرير والمذكرة الإدارية", "النصوص الاقتصادية وقراءتها", "الإعلام الاقتصادي وتحليله", "الحجة والإقناع في السياق الاقتصادي", "أساليب الكتابة المهنية", "قضايا التنمية والاقتصاد في الأدب العربي", "اللغة العربية في المؤسسة الاقتصادية", "التواصل الفعّال بالعربية في السياق المهني"],
+  'Arabe_2as_lettres': ["النص الأدبي الجاهلي وتحليله", "الشعر الإسلامي والأموي", "أدب العصر العباسي وخصائصه", "الشعر الأندلسي وتميزه", "النثر الفني: المقامات والرسائل", "الأدب العربي الحديث (النهضة والإحياء)", "البيان والبديع في الأدب العربي", "مناهج النقد الأدبي الحديث", "الأدب الجزائري العربي المعاصر", "تحليل النصوص الأدبية ونقدها"],
+  'Arabe_2as_langues': ["النص الأدبي وقراءته النقدية", "أساليب التعبير والتواصل باللغة العربية", "مقارنة اللغات (العربية، الفرنسية، الإسبانية/الألمانية)", "الترجمة ومبادئها بين اللغات", "الأدب المقارن: لقاءات الثقافات", "التعبير الكتابي المتقدم باللغة العربية", "أثر الثقافات على اللغة", "اللغة العربية في العالم: الانتشار والتحديات", "لغة الإعلام والتواصل العربي", "الهوية الثقافية واللغات"],
+  'Arabe_2as_philo': ["الفلسفة العربية الإسلامية وأعلامها", "اللغة والفكر في الفلسفة العربية", "التراث العربي الإسلامي والفلسفة", "النص الفلسفي العربي وقراءته", "الفلسفة واللغة: إشكاليات", "المنطق في الفلسفة الإسلامية (ابن رشد)", "الأدب والفلسفة: تقاطعات", "الكتابة الفلسفية باللغة العربية", "قضايا الهوية والحضارة في الفكر العربي المعاصر", "الفلسفة والدين في الفكر الإسلامي"],
+  'Arabe_2as_technique': ["أساليب التواصل التقني باللغة العربية", "التقرير الفني واشتراطاته اللغوية", "المصطلح التقني في العربية", "التعريب والمصطلحية في العلوم والتقنية", "الكتابة التقنية: خصائصها وأنواعها", "التعليمات والمواصفات الفنية بالعربية", "اللغة العربية في الوثيقة التقنية والتجارية", "الهوية المهنية واللغة", "قضايا التعريب في الجزائر", "التراث العلمي العربي الإسلامي"],
+
+  // ── FRANÇAIS 2AS ──
+  'Français_2as_math': ['La dissertation scientifique et argumentative','L\'explication de texte (méthode académique)','Les textes scientifiques et leur analyse','La langue française et les sciences','La communication technique en français','Les mouvements philosophiques et scientifiques (Lumières, Positivisme)','La littérature française contemporaine','L\'argumentation avancée dans les écrits scientifiques','La synthèse de documents complexes','Préparation aux écrits du BAC'],
+  'Français_2as_scientifique': ['La dissertation argumentative (thème scientifique)','L\'explication de texte littéraire','Les textes scientifiques (structure, vocabulaire)','La vulgarisation scientifique en français','Les mouvements littéraires et la science','La littérature et l\'environnement','L\'argumentation en contexte scientifique','La synthèse documentaire','La langue de spécialité (biologie, chimie, physique)','Préparation au BAC'],
+  'Français_2as_gestion': ['La communication d\'entreprise en français','La lettre commerciale et la lettre administrative','Le rapport d\'activité et le compte rendu','La rédaction de documents professionnels','Le compte rendu de réunion','La prise de notes et le résumé','La négociation et la communication orale professionnelle','Le français économique et ses spécificités','L\'argumentation dans le monde des affaires','Préparation au BAC'],
+  'Français_2as_lettres': ['La dissertation littéraire avancée','L\'explication de texte littéraire (méthode complète)','Les courants littéraires (classicisme, romantisme, réalisme, naturalisme)','La poésie française (Baudelaire, Verlaine, Rimbaud, Apollinaire)','Le roman du XIXème siècle (Balzac, Flaubert, Zola)','Le théâtre classique et moderne (Molière, Racine, Beckett)','La littérature de l\'absurde (Camus, Sartre)','La francophonie et la littérature algérienne','La critique littéraire : méthodes et approches','Préparation au BAC (dissertation et explication de texte)'],
+  'Français_2as_langues': ['La traduction littéraire (principes et pratique)','Les registres de langue et leurs emplois','La langue française dans le monde (francophonie)','Littérature comparée (textes en français et en langue étrangère)','La communication interculturelle en français','Les genres littéraires et leurs caractéristiques','L\'analyse linguistique de textes variés','La rédaction avancée en français','Les médias en français (presse, radio, TV)','Préparation au BAC'],
+  'Français_2as_philo': ['La dissertation philosophique en français','L\'explication de texte philosophique','Les grands philosophes francophones (Descartes, Rousseau, Voltaire, Sartre)','Le discours philosophique : caractéristiques et analyse','La langue philosophique : précision et rigueur','La rhétorique et l\'argumentation philosophique','La littérature française et la philosophie','Les Lumières et leurs idéaux','L\'existentialisme français','Préparation au BAC'],
+  'Français_2as_technique': ['La rédaction technique en français','Les manuels et notices techniques','La communication professionnelle en français','Le rapport technique et sa structure','La documentation industrielle en français','Le vocabulaire technique français','La présentation orale technique en français','La correspondance professionnelle','Le compte rendu et le procès-verbal','Préparation au BAC'],
+
+  // ── ANGLAIS 2AS ──
+  'Anglais_2as_math': ['Advanced grammar structures (subjunctive, inversion)','Scientific English : reading research articles','Writing scientific abstracts and reports','Critical thinking and logical reasoning in English','Environmental and technological issues','Globalization and its effects','Advanced essay writing (argumentative)','English for Mathematics (terminology)','English for Physics and Chemistry (terminology)','Revision for the Baccalaureate exam'],
+  'Anglais_2as_scientifique': ['Reading and analyzing scientific texts','Scientific vocabulary (biology, chemistry, physics)','Writing scientific reports and lab summaries','Environmental issues and solutions','Technology and its impact on society','Advanced grammar for scientific writing','Discussing cause and effect in English','Research skills in English','Critical analysis of global issues','Revision for the Baccalaureate exam'],
+  'Anglais_2as_gestion': ['Business English : emails, letters, reports','English for Economics and Finance','Marketing vocabulary and strategies in English','International trade and commerce in English','Presentations and public speaking in English','Negotiation and communication skills','Reading financial documents in English','Advertising and media in English','Globalization and international business','Revision for the Baccalaureate exam'],
+  'Anglais_2as_lettres': ['British and American literature (short stories, poetry)','Literary analysis in English','Advanced grammar and stylistics','Translation and comparative literature','Culture and civilization (UK, USA, Algeria)','Creative writing in English','Debating and public speaking','The novel in English (key texts)','Film and media studies in English','Revision for the Baccalaureate exam'],
+  'Anglais_2as_langues': ['Advanced reading comprehension (diverse texts)','Translation techniques (English-French-Arabic)','Comparative linguistics (English and other languages)','Intercultural communication','Advanced writing skills (essays, articles)','Literature in English (varied genres)','Media and journalism in English','Language and identity','English as a global language','Revision for the Baccalaureate exam'],
+  'Anglais_2as_philo': ['Philosophy texts in English (Locke, Hume, Mill)','Critical thinking and argumentation in English','Logical fallacies and rhetoric','Political philosophy in English','Ethics and moral reasoning in English','Reading philosophical essays','Writing philosophical arguments in English','Mind, knowledge and reality in English','Social and political issues in English','Revision for the Baccalaureate exam'],
+  'Anglais_2as_technique': ['Technical English : reading manuals and specifications','Engineering vocabulary in English','Writing technical reports in English','Safety instructions and procedures in English','Computer science and technology English','Industrial processes in English','Diagrams and technical drawings description','Problem-solving and troubleshooting in English','International technical standards','Revision for the Baccalaureate exam'],
+
+  // ── ÉCONOMIE & DROIT 2AS Gestion ──
+  'Économie & Droit_2as_gestion': ["مقدمة في الاقتصاد: التعريفات، الحاجات، الموارد", "الأنظمة الاقتصادية (الرأسمالية، الاشتراكية، الاقتصاد المختلط)", "العرض والطلب: آليات السوق", "الأشكال المختلفة للسوق (المنافسة، الاحتكار، قلة العرض)", "النقد: الوظائف، الأنواع وخلق النقود", "النظام المصرفي الجزائري والدولي", "المؤسسة: التعريف، التصنيف والأهداف", "الأشكال القانونية للمؤسسة في الجزائر (ذات المسؤولية المحدودة، الأسهم، الفردية)", "الدولة ودورها الاقتصادي (التدخلية، الليبرالية)", "التجارة الدولية وميزان المدفوعات"],
+
+  // ── COMPTABILITÉ 2AS Gestion ──
+  'Comptabilité_2as_gestion': ["مقدمة في المحاسبة العامة: التعريف والدور", "الميزانية المحاسبية: الأصول (الاستخدامات) والخصوم (الموارد)", "المخطط المحاسبي الوطني الجزائري: الهيكل والاستخدام", "طريقة القيد المزدوج وتوازن الميزانية", "اليومية المحاسبية والأستاذ (تسجيل العمليات)", "عمليات الشراء والبيع (البضائع، الخدمات)", "الرسم على القيمة المضافة: الحساب والمعالجة المحاسبية", "الأصول الثابتة المادية وغير المادية (الاقتناء، الإهتلاك)", "المخزونات: التقييم (الوارد أولاً صادر أولاً، متوسط التكلفة المرجح) والمحاسبة", "الحقوق على العملاء والديون للموردين"],
+
+  // ── LITTÉRATURE ARABE 2AS Lettres ──
+  'Littérature Arabe_2as_lettres': ["الشعر الجاهلي: خصائصه وأغراضه (الفخر، الرثاء، الغزل، الوصف)", "معلقة امرئ القيس: دراسة نقدية وتحليل أسلوبي", "معلقة عنترة بن شداد: الفروسية والحب", "الشعر في صدر الإسلام (حسان بن ثابت، كعب بن زهير)", "الشعر في العصر الأموي: جرير والفرزدق والأخطل", "أدب العصر العباسي: أبو نواس، أبو تمام، البحتري", "المتنبي: ديوانه وفلسفته الشعرية", "الشعر الأندلسي: ابن زيدون، ابن حزم (طوق الحمامة)", "النثر الفني العربي: المقامات (الهمذاني والحريري)", "الأدب الجزائري في العهد العثماني وإرهاصات النهضة"],
+
+  // ── ESPAGNOL/ALLEMAND 2AS Langues ──
+  'Espagnol / Allemand_2as_langues': ["مقدمة والتحيات (Saludos / Begrüßung)", "الأسرة والعلاقات الاجتماعية", "الحياة اليومية والعادات", "الطعام والوجبات والتخصصات الطهوية", "الترفيه والرياضة والثقافة", "المدينة والمواصلات والأسفار", "الصحة وأعضاء الجسم والمهن الطبية", "العمل والمهن والاقتصاد", "الإعلام والتكنولوجيا والمعلوماتية", "ثقافة وتقاليد بلد اللغة"],
+
+  // ── SCIENCES TECHNIQUES 2AS Technique ──
+  'Sciences Techniques_2as_technique': ["تحليل وتصميم الآليات (المخطط الحركي)", "الوصلات الميكانيكية (محورية، انزلاقية، محورية-انزلاقية)", "حركية الآليات (السرعات، التسارعات)", "الإستاتيكا الرسومية (توازن المجسمات)", "مقاومة المواد (الإجهادات، الشوه)", "مواد البناء (الفولاذ، الألومينيوم، البلاستيك)", "نقل القدرة (التروس، الأحزمة، السلاسل)", "الدوائر الهوائية (المكونات، المخططات، التطبيقات)", "الدوائر الهيدروليكية (المكونات، المخططات، التطبيقات)", "الإنتاجية وطرق التصنيع"],
+
+  // ══════════════════════════════════════
+  // LYCÉE — 3AS / BAC TOUTES FILIERES
+  // ══════════════════════════════════════
+
+  // ── MATHÉMATIQUES 3AS/BAC ──
+  'Mathématiques_3as_math': ["النهايات والاتصال (نظريات متقدمة)", "الاشتقاق المتقدم (قاعدة السلسلة، المشتقات المتتالية)", "الأصول والتكامل (طرق الحساب)", "اللوغاريتمات والأسيات (خصائص وتطبيقات)", "المعادلات التفاضلية من الدرجة الأولى والثانية", "المتتاليات العددية المتقدمة (التقارب، المعايير)", "الأعداد المركبة المتقدمة (الشكل الأسي، الجذور n)", "الهندسة في الفضاء المتقدمة (الكرة، المستوى، المستقيم)", "الإحصاء والاحتمالات المتقدمة (التوزيع الطبيعي، ذو الحدين)", "مراجعة عامة ومنهجية بكالوريا رياضيات"],
+  'Mathématiques_3as_technique': ["الدوال وتطبيقاتها التقنية", "الاشتقاق والتحسين في الهندسة", "التكامل وتطبيقاته (المساحات، الأحجام)", "المعادلات التفاضلية وتطبيقاتها", "الأعداد المركبة والتيار المتردد", "الهندسة التحليلية والرسم الصناعي", "الإحصاء المطبق على ضبط الجودة", "الاحتمالات والنماذج العشوائية", "الحساب والخوارزميات", "مراجعة عامة ومنهجية بكالوريا تقني رياضي"],
+  'Mathématiques_3as_scientifique': ["دوال اللوغاريتم والأسية (تعمق)", "الاشتقاق وتطبيقاته في العلوم", "الأصول والتكامل المحدود", "المعادلات التفاضلية الخطية", "المتتاليات العددية (تطبيقات في البيولوجيا والفيزياء)", "الاحتمالات: قانون ذي الحدين والتوزيع الطبيعي", "الهندسة في الفضاء", "الإحصاء بمتغيرين (الارتباط، الانحدار)", "مراجعة موضوعاتية لكل مادة علمية", "مراجعة عامة ومنهجية بكالوريا علوم"],
+  'Mathématiques_3as_gestion': ["الدوال وتطبيقاتها الاقتصادية والمالية", "التحسين (تعظيم الربح، تدنية التكاليف)", "الرياضيات المالية (الفوائد، الدفعات السنوية، القروض)", "المتتاليات والمتسلسلات (التطبيقات المالية)", "الإحصاء المتقدم (تحليل البيانات الاقتصادية)", "الاحتمالات وإدارة المخاطر", "البرمجة الخطية (الطريقة البيانية والمبسطة)", "المصفوفات ومنظومات المعادلات", "المؤشرات الاقتصادية وتفسيرها", "مراجعة عامة ومنهجية بكالوريا تسيير"],
+  'Mathématiques_bac_math': ["مراجعة: النهايات، الاتصال، الاشتقاق", "مراجعة: التكامل والأصول", "مراجعة: اللوغاريتمات والأسيات", "مراجعة: المعادلات التفاضلية", "مراجعة: المتتاليات العددية", "مراجعة: الأعداد المركبة المتقدمة", "مراجعة: الهندسة في الفضاء", "مراجعة: الاحتمالات والإحصاء", "مسائل نموذجية لبكالوريا الرياضيات (أرشيف)", "المنهجية وإدارة الوقت في الامتحان"],
+  'Mathématiques_bac_scientifique': ["مراجعة: دوال اللوغاريتم والأسية", "مراجعة: الاشتقاق والتكامل", "مراجعة: المعادلات التفاضلية", "مراجعة: المتتاليات العددية والاحتمالات", "مراجعة: الهندسة في الفضاء", "مسائل نموذجية لبكالوريا علوم تجريبية (أرشيف)", "مسائل متكاملة (فيزياء-رياضيات، بيولوجيا-رياضيات)", "منهجية البكالوريا: إدارة التمارين", "أرشيف مصحح بكالوريا علوم", "المراجعة النهائية ونصائح"],
+  'Mathématiques_bac_technique': ["مراجعة كاملة لبرنامج الرياضيات التقني", "مسائل نموذجية لبكالوريا تقني رياضي", "التطبيقات الصناعية للرياضيات", "مراجعة المعادلات التفاضلية والتكاملات", "مراجعة الإحصاء والاحتمالات التطبيقية", "مراجعة الهندسة التحليلية", "أرشيف مصحح بكالوريا تقني رياضي", "تمارين متكاملة متعددة التخصصات", "المنهجية والنصائح للبكالوريا", "المراجعة النهائية"],
+  'Mathématiques_bac_gestion': ["مراجعة: الرياضيات المالية", "مراجعة: التحسين والبرمجة الخطية", "مراجعة: الإحصاء والاحتمالات", "مراجعة: الدوال الاقتصادية", "مسائل نموذجية لبكالوريا تسيير واقتصاد (أرشيف)", "تمارين تطبيقية اقتصادية", "مراجعة المصفوفات والمنظومات", "منهجية بكالوريا تسيير", "أرشيف مصحح بكالوريا تسيير", "المراجعة النهائية"],
+
+  // ── PHYSIQUE-CHIMIE 3AS/BAC ──
+  'Physique-Chimie_3as_math': ["الميكانيكا المتقدمة: الحركية (المتحرك بحركة مستقيمة منتظمة، متسارعة، المقذوفات)", "ديناميكا الدوران (عزم القصور الذاتي، نظرية عزم الكمية الحركية)", "التجاذب الكوني وقوانين كبلر", "الموجات الميكانيكية والضوئية (الحيود، التداخل)", "مفعول دوبلر وتطبيقاته", "الكيمياء العضوية المتقدمة (تحديد المركبات)", "البوليمرات والجزيئات الكبيرة", "النشاط الإشعاعي: الأنواع، قانون التناقص، التطبيقات", "التفاعلات النووية (الانشطار، الاندماج)", "مراجعة عامة ومنهجية بكالوريا فيزياء"],
+  'Physique-Chimie_3as_scientifique': ["الميكانيكا: حركة المجسمات والموائع", "التذبذبات المجبرة والرنين", "الموجات الكهرومغناطيسية (الضوء، الراديو، الأشعة الميكروية)", "الكيمياء العضوية: التفاعلات والآليات", "الجزيئات الكبيرة والبوليمرات الطبيعية والاصطناعية", "الحرارية الكيميائية (المحتوى الحراري، طاقة الرابطة)", "الحركية الكيميائية المتقدمة (رتبة التفاعل، زمن نصف العمر)", "النشاط الإشعاعي والفيزياء النووية", "التفاعلات النووية وتطبيقاتها الطبية", "مراجعة عامة ومنهجية بكالوريا علوم"],
+  'Physique-Chimie_bac_math': ["مراجعة: الميكانيكا (الحركية والديناميكا)", "مراجعة: التذبذبات والموجات", "مراجعة: الكيمياء العضوية", "مراجعة: النشاط الإشعاعي والفيزياء النووية", "مسائل نموذجية لبكالوريا فيزياء-كيمياء (رياضيات)", "أرشيف مصحح بكالوريا", "مسائل متكاملة (فيزياء-رياضيات)", "منهجية بكالوريا فيزياء", "المراجعة النهائية كيمياء", "إدارة الوقت في الامتحان"],
+  'Physique-Chimie_bac_scientifique': ["مراجعة: ميكانيكا النقطة والمجسم", "مراجعة: الكهرومغناطيسية والموجات", "مراجعة: الكيمياء العضوية والكيمياء الحيوية", "مراجعة: النشاط الإشعاعي والنووي", "مسائل نموذجية لبكالوريا علوم تجريبية", "أرشيف مصحح بكالوريا فيزياء-كيمياء علوم", "مسائل علمية متكاملة", "المنهجية والنصائح", "المراجعة النهائية فيزياء", "المراجعة النهائية كيمياء"],
+  'Physique-Chimie_bac_technique': ["مراجعة: ميكانيكا المجسمات", "مراجعة: الديناميكا الحرارية", "مراجعة: الكهروتقنية", "مراجعة: كيمياء المواد", "مسائل نموذجية لبكالوريا تقني رياضي", "أرشيف مصحح بكالوريا تقني", "مسائل تقنية متكاملة", "منهجية بكالوريا تقني", "المراجعة النهائية", "إدارة الوقت في الامتحان"],
+
+  // ── SCIENCES NATURELLES 3AS/BAC ──
+  'Sciences Naturelles_3as_scientifique': ["مراجعة: الوراثة الجزيئية (الحمض النووي، النسخ، الترجمة)", "مراجعة: الوراثة المندلية والشذوذات الكروموسومية", "مراجعة: الفيزيولوجيا البشرية المتكاملة (التغذية، التنفس، الدورة الدموية)", "مراجعة: الجهاز العصبي والتنظيم العصبي الهرموني", "مراجعة: علم المناعة وتطبيقاته (الإيدز، الحساسية، زراعة الأعضاء)", "مراجعة: تطور الأنواع والتنوع البيولوجي", "مراجعة: علم البيئة والدورات الجيوكيميائية", "التقنيات الحيوية الحالية (الكائنات المعدلة، تفاعل البوليميراز، العلاج الجيني)", "أخلاقيات علم الأحياء والرهانات الأخلاقية للبيولوجيا الحديثة", "منهجية المقالة وتحليل الوثائق في علوم الطبيعة والحياة"],
+  'Sciences Naturelles_bac_scientifique': ["مراجعة شاملة: الوحدة 1 (الوراثة الجزيئية)", "مراجعة شاملة: الوحدة 2 (الفيزيولوجيا البشرية)", "مراجعة شاملة: الوحدة 3 (علم المناعة)", "مراجعة شاملة: الوحدة 4 (التطور وعلم البيئة)", "مسائل نموذجية لبكالوريا علوم الطبيعة والحياة (أرشيف)", "أرشيف مصحح بكالوريا علوم طبيعية", "مسائل متكاملة (وراثة + مناعة)", "مسائل متكاملة (فيزيولوجيا + تنظيم)", "منهجية البكالوريا: المقالة وتحليل الوثائق", "نصائح واستراتيجيات لامتحان البكالوريا"],
+
+  // ── PHILOSOPHIE 3AS/BAC ──
+  'Philosophie_3as_math': ["المنطق والحجة (القياس، المغالطات)", "الحقيقة: المنطقية، العلمية، الفلسفية", "الحرية والمسؤولية", "العدالة والدولة", "المعرفة وحدودها (الشك، العقلانية)", "التقنية والإنسانية (هيدغر، إيلول)", "العدالة الاجتماعية (رولز، ماركس)", "الدولة الديمقراطية وأسسها", "الثقافة والهوية في العولمة", "منهجية البكالوريا: المقالة وشرح النص"],
+  'Philosophie_3as_scientifique': ["العقل وقدراته في العلم", "الحقيقة العلمية (بوبر، كون، باشلار)", "الكائن الحي بين العلم والفلسفة", "الحرية والحتمية في العلم", "التقنية والعلم والأخلاق", "الإنسان والطبيعة (الفيلسوف البيئي)", "العدالة وحقوق الإنسان", "الدولة والديمقراطية والسياسة", "الثقافة والدين في الحداثة", "منهجية بكالوريا: المقالة وشرح النص"],
+  'Philosophie_3as_lettres': ["العقل وحدوده", "اللغة ووظائفها الفلسفية", "الحرية والمسؤولية", "العدالة والقانون الطبيعي", "الفن والخلق الجمالي", "الدين والعقل: الإيمان والفلسفة", "التاريخ: المعنى، التقدم والكوارث", "الحقيقة: المناهج الفلسفية المتعددة", "السياسة والأخلاق (ميكيافيلي، روسو، رولز)", "منهجية البكالوريا: المقالة وشرح النص الفلسفي"],
+  'Philosophie_3as_philo': ["تعمق الميتافيزيقا", "فلسفة المعرفة المتقدمة (الإبستيمولوجيا)", "الأخلاق: النظريات الأخلاقية (كانط، ميل، أرسطو)", "الفلسفة السياسية المتقدمة", "فلسفة اللغة والمعنى", "فلسفة التاريخ (هيغل، ماركس، أرون)", "علم الجمال الفلسفي المتقدم", "فلسفة الأديان المقارنة", "الفلسفة المعاصرة (الظاهراتية، التأويلية)", "منهجية بكالوريا فلسفة"],
+  'Philosophie_3as_gestion': ["الرشاشية الاقتصادية وحدودها", "الملكية والقيمة والثروة", "العمل: الاغتراب والتحرر", "العدالة الاقتصادية وإعادة التوزيع", "أخلاقيات الأعمال", "العولمة: نقد فلسفي", "الديمقراطية واقتصاد السوق", "التنمية المستدامة: منظور أخلاقي", "دولة الرفاه وأسسها الفلسفية", "منهجية بكالوريا فلسفة"],
+  'Philosophie_3as_technique': ["التقنية والفلسفة: من الأداة إلى الآلة", "الإنسان الاصطناعي (الروبوتيك، الذكاء الاصطناعي)", "العمل والتقنية (تحويل الطبيعة)", "الرشاشية التقنية وحدودها", "الأخلاق في الهندسة والتكنولوجيا", "الفلسفة البيئية (الفيلسوف البيئي)", "التقنية والحرية", "الجمال الصناعي (التصميم، علم الجمال الصناعي)", "المجتمع التكنولوجي وتحدياته", "منهجية بكالوريا فلسفة"],
+  'Philosophie_bac_math': ["مراجعة: الحقيقة والمعرفة", "مراجعة: الحرية والمسؤولية", "مراجعة: العلم والتقنية", "مراجعة: العدالة والدولة", "مسائل نموذجية لبكالوريا فلسفة (رياضيات)", "أرشيف مصحح بكالوريا فلسفة", "المنهجية الكاملة للمقالة الفلسفية", "منهجية شرح النص الفلسفي", "مسائل تدريبية موقوتة", "آخر نصائح قبل البكالوريا"],
+  'Philosophie_bac_scientifique': ["مراجعة: الأسئلة الفلسفية الكبرى", "مراجعة: فلسفة العلوم", "مراجعة: الأخلاق والسياسة", "مراجعة: الثقافة، الفن، الدين", "مسائل نموذجية لبكالوريا فلسفة (علوم تجريبية)", "أرشيف مصحح بكالوريا فلسفة علوم", "التدريب على المقالة", "التدريب على شرح النص", "نصائح منهجية", "المراجعة النهائية"],
+  'Philosophie_bac_lettres': ["مراجعة كاملة لبرنامج فلسفة الآداب", "مسائل نموذجية لبكالوريا فلسفة (آداب)", "أرشيف مصحح بكالوريا فلسفة آداب", "المقالة: مسائل وتصحيحات", "شرح النص: المنهجية والأمثلة", "الفلاسفة في البرنامج: مراجعة كاملة", "أسئلة الدرس ومعالجتها", "التدريب الموقوت", "المراجعة النهائية", "نصائح ليوم البكالوريا"],
+  'Philosophie_bac_gestion': ["مراجعة: الفلسفة الاقتصادية والاجتماعية", "مراجعة: الأخلاق والعدالة", "مراجعة: السياسة والديمقراطية", "مسائل نموذجية لبكالوريا فلسفة تسيير", "أرشيف مصحح", "منهجية المقالة", "منهجية شرح النص", "التدريب", "المراجعة النهائية", "نصائح للامتحان"],
+  'Philosophie_bac_technique': ["مراجعة: فلسفة التقنية", "مراجعة: الأخلاق والمسؤولية", "مراجعة: الحرية والحتمية", "مسائل نموذجية لبكالوريا تقني", "أرشيف مصحح بكالوريا فلسفة تقني", "منهجية المقالة", "منهجية شرح النص", "تدريب موقوت", "المراجعة النهائية", "نصائح للامتحان"],
+
+  // ── HISTOIRE-GÉOGRAPHIE 3AS/BAC ──
+  'Histoire-Géographie_3as_math': ["العالم بعد الحرب الباردة (1991-2001)", "الأزمات والصراعات في العالم المعاصر", "العولمة: المزايا والحدود", "الجزائر بين 1988 والحاضر (التحول الديمقراطي، الإصلاحات)", "الجيوسياسة النفطية والغازية", "التنمية المستدامة ومؤتمرات الأطراف (اتفاقية باريس)", "الجغرافيا الاقتصادية العالمية المتقدمة", "المدن العالمية الكبرى (التجمعات الحضرية الكبرى)", "الجزائر في السياق الجيوسياسي الإقليمي والدولي", "مراجعة عامة ومنهجية بكالوريا تاريخ وجغرافيا"],
+  'Histoire-Géographie_3as_scientifique': ["العالم المعاصر بعد الحرب الباردة", "التهديدات الجديدة (الإرهاب، الحروب الأهلية، الأزمات الإنسانية)", "العولمة الثقافية وتداعياتها", "الجزائر المعاصرة: السياسة، الاقتصاد، المجتمع", "الموارد الطبيعية العالمية وإدارتها", "البيئة: التحديات والحلول (تغير المناخ)", "جغرافية التفاوتات العالمية", "حركات الهجرة الدولية", "الجزائر في التنمية المستدامة", "مراجعة عامة ومنهجية بكالوريا تاريخ وجغرافيا"],
+  'Histoire-Géographie_bac_math': ["مراجعة: العالم بعد 1945 والحرب الباردة", "مراجعة: التحرر من الاستعمار والدول النامية", "مراجعة: الجزائر المعاصرة (1962-حاضر)", "مراجعة: العولمة", "مسائل نموذجية لبكالوريا التاريخ (أرشيف)", "مسائل نموذجية لبكالوريا الجغرافيا (أرشيف)", "أرشيف مصحح بكالوريا تاريخ وجغرافيا", "منهجية البكالوريا: التأليف وتحليل الوثيقة", "تدريب موقوت", "المراجعة النهائية"],
+  'Histoire-Géographie_bac_scientifique': ["مراجعة: تاريخ العالم المعاصر", "مراجعة: الجزائر في العالم", "مراجعة: الجغرافيا الاقتصادية والبشرية", "مراجعة: البيئة والتنمية المستدامة", "مسائل نموذجية لبكالوريا علوم تجريبية تاريخ وجغرافيا", "أرشيف مصحح بكالوريا", "المنهجية", "التدريب", "المراجعة النهائية جغرافيا", "المراجعة النهائية تاريخ"],
+  'Histoire-Géographie_bac_lettres': ["مراجعة: التاريخ السياسي والثقافي للقرن العشرين", "مراجعة: الجزائر المعاصرة", "مراجعة: الجغرافيا البشرية والثقافية", "مراجعة: العولمة والهويات", "مسائل نموذجية لبكالوريا آداب تاريخ وجغرافيا", "أرشيف مصحح بكالوريا", "منهجية البكالوريا: التأليف والتحليل", "تدريب موقوت", "مسائل تطبيقية", "المراجعة النهائية"],
+  'Histoire-Géographie_bac_gestion': ["مراجعة: الاقتصاد العالمي والجيوسياسة", "مراجعة: الجزائر في الاقتصاد العالمي", "مراجعة: العولمة والتجارة الدولية", "مراجعة: التنمية والتفاوتات", "مسائل نموذجية لبكالوريا تسيير تاريخ وجغرافيا", "أرشيف مصحح بكالوريا", "منهجية البكالوريا", "التدريب", "المراجعة النهائية", "نصائح للامتحان"],
+  'Histoire-Géographie_bac_technique': ["مراجعة: التاريخ الصناعي والتكنولوجي", "مراجعة: الجغرافيا الاقتصادية", "مراجعة: الجزائر الصناعية", "مراجعة: الموارد والبيئة", "مسائل نموذجية لبكالوريا تقني تاريخ وجغرافيا", "أرشيف مصحح بكالوريا", "منهجية البكالوريا", "التدريب", "المراجعة النهائية", "نصائح للامتحان"],
+
+  // ── ÉDUCATION ISLAMIQUE 3AS/BAC ──
+  'Éducation Islamique_3as_math': ["مفهوم التوحيد وأثره في حياة المسلم", "الإسلام والعلم والتكنولوجيا", "الأخلاق الإسلامية في مجال المهنة والعمل", "فقه المعاملات المالية المعاصرة (البنوك الإسلامية)", "الإسلام والقضايا الكبرى المعاصرة (البيئة، السلام، العولمة)", "حقوق الإنسان في الإسلام والمواثيق الدولية", "الأسرة في الإسلام وتحديات العصر", "الهوية الإسلامية والتحديات الفكرية المعاصرة", "قضايا الشباب المسلم في العصر الحديث", "مراجعة شاملة ومنهجية للبكالوريا"],
+  'Éducation Islamique_3as_scientifique': ["الإسلام والعلوم التجريبية", "الإعجاز العلمي في القرآن الكريم", "الإسلام والتطور والتقدم العلمي", "أخلاقيات البحث العلمي في الإسلام", "الإسلام والبيئة (المحافظة على الموارد الطبيعية)", "الهندسة الوراثية والأخلاق الإسلامية", "الإسلام والصحة والطب", "قضايا الحياة والموت في الفقه الإسلامي", "الإسلام والمجتمع العلمي المعاصر", "مراجعة شاملة للبكالوريا"],
+  'Éducation Islamique_bac_math': ["مراجعة شاملة للعقيدة والفقه", "مراجعة السيرة النبوية والحضارة الإسلامية", "مراجعة القضايا المعاصرة", "نماذج امتحانات البكالوريا مع التصحيح", "أسئلة متوقعة وإجاباتها", "منهجية الإجابة في امتحان الدين الإسلامي", "تقنيات مراجعة مادة الدين الإسلامي", "النصوص والشواهد الضرورية", "مراجعة نهائية", "نصائح ليوم الامتحان"],
+  'Éducation Islamique_bac_scientifique': ["مراجعة العقيدة والإسلام والعلوم", "مراجعة الفقه والأخلاق", "مراجعة القضايا المعاصرة", "نماذج امتحانات البكالوريا", "الأسئلة المتوقعة وإجاباتها", "منهجية الإجابة", "مراجعة نهائية للأحكام الفقهية", "الشواهد القرآنية والنبوية الضرورية", "مراجعة نهائية", "نصائح للامتحان"],
+
+  // ── ARABE 3AS/BAC ──
+  'Arabe_3as_math': ["مراجعة وتعميق الدراسة الأدبية والنقدية", "قضايا اللغة والأدب في العصر الحديث", "الشعر العربي المعاصر (أدونيس، محمود درويش)", "القصة القصيرة والرواية العربية الحديثة", "اللغة العربية والهوية الوطنية", "التعبير الكتابي المتقدم والمقال الأدبي", "الكتابة الأكاديمية والعلمية باللغة العربية", "قضايا التعريب في الجزائر", "نماذج بكالوريا لغة عربية مصحَّحة", "منهجية الامتحان ونصائح"],
+  'Arabe_3as_scientifique': ["اللغة العربية في خدمة العلوم", "لغة الأدب ولغة العلم: مقارنة أسلوبية", "النص الأدبي المعاصر وقراءته النقدية", "قضايا اللغة والتكنولوجيا", "التعبير العلمي الأدبي المتقدم", "الكتابة الإبداعية والعلمية باللغة العربية", "قضايا الهوية والحداثة في الأدب العربي الجزائري", "أعلام الأدب الجزائري: مالك حداد، كاتب ياسين، مفدي زكرياء", "نماذج بكالوريا لغة عربية مصحَّحة", "منهجية الامتحان"],
+  'Arabe_3as_lettres': ["الأدب العربي الحديث والمعاصر: المدارس والتيارات", "الرومانسية والواقعية في الأدب العربي", "الشعر الحر وقصيدة النثر", "الرواية العربية المعاصرة (نجيب محفوظ، غسان كنفاني)", "الأدب الجزائري المعاصر (رواية، شعر، مسرح)", "مناهج النقد الأدبي الحديث والمعاصر", "التحليل الأدبي المتقدم والكتابة النقدية", "الفصاحة والبلاغة في التعبير الأدبي", "نماذج بكالوريا لغة عربية شعبة آداب مصحَّحة", "منهجية الامتحان ونصائح"],
+  'Arabe_bac_math': ["مراجعة شاملة: الأسلوب والبلاغة", "مراجعة شاملة: الأدب الجزائري والعربي", "التعبير الكتابي: المقال والدراسة الأدبية", "نصوص متوقعة وتحليلها", "نماذج بكالوريا مصحَّحة", "منهجية الإجابة في اللغة العربية", "أسئلة القواعد المتوقعة", "أسئلة البلاغة المتوقعة", "مراجعة نهائية", "نصائح ليوم الامتحان"],
+  'Arabe_bac_scientifique': ["مراجعة قواعد اللغة العربية المقررة", "مراجعة البلاغة والأساليب", "التعبير الكتابي المتقدم", "النصوص الأدبية وتحليلها", "نماذج بكالوريا مصحَّحة", "الأسئلة المتوقعة", "منهجية الإجابة", "مراجعة نهائية للأدب", "مراجعة نهائية للقواعد", "نصائح للامتحان"],
+  'Arabe_bac_lettres': ["مراجعة شاملة لبرنامج الآداب", "نصوص الأدب الجاهلي والإسلامي", "نصوص الأدب العباسي والأندلسي", "نصوص الأدب الحديث والمعاصر", "الأدب الجزائري: نماذج وتحليلات", "نماذج بكالوريا شعبة آداب مصحَّحة", "منهجية المقال الأدبي والنقدي", "منهجية تحليل النص الأدبي", "مراجعة نهائية", "نصائح ليوم الامتحان"],
+
+  // ── FRANÇAIS 3AS/BAC ──
+  'Français_3as_math': ['La dissertation argumentative avancée','L\'explication de texte (textes philosophiques et scientifiques)','Les grands courants philosophiques en textes','La littérature et les sciences','L\'argumentation dans les textes contemporains','Révision des procédés rhétoriques et stylistiques','La communication efficace à l\'écrit et à l\'oral','Sujets types BAC Français (Mathématiques)','Annales corrigées BAC Français','Méthodologie BAC : gestion du temps'],
+  'Français_3as_scientifique': ['La dissertation (thème scientifique et philosophique)','L\'explication de texte (textes variés)','La vulgarisation scientifique : analyse et production','L\'argumentation dans les textes de sciences','Révision des figures de style et des procédés','La communication écrite avancée','Sujets types BAC Français (Sciences Expérimentales)','Annales corrigées BAC','Méthodologie BAC Français','Entraînement chronométré'],
+  'Français_3as_lettres': ['La dissertation littéraire avancée','L\'explication de texte littéraire (complète)','La synthèse de documents complexes','Les mouvements littéraires du XXème siècle','La littérature algérienne d\'expression française','L\'argumentation littéraire et philosophique','Révision stylistique et rhétorique','Sujets types BAC Français (Lettres)','Annales corrigées BAC Français Lettres','Méthodologie BAC et entraînement'],
+  'Français_bac_math': ['Révision : la dissertation','Révision : l\'explication de texte','Révision : les procédés argumentatifs','Sujets types BAC Français (Math)','Annales corrigées BAC','Entraînement chronométré','Méthodologie complète','Dernière révision des règles','Correction d\'erreurs fréquentes','Conseils pour le jour J'],
+  'Français_bac_scientifique': ['Révision : la dissertation scientifique','Révision : l\'explication de texte','Révision : les figures de style','Sujets types BAC Français (Sciences)','Annales corrigées BAC Français Sciences','Entraînement chronométré','Méthodologie BAC','Correction des erreurs fréquentes','Dernière révision','Conseils pour l\'examen'],
+  'Français_bac_lettres': ['Révision complète du programme de Français Lettres','Dissertation littéraire : sujets et corrections','Explication de texte : exercices complets','Les auteurs au programme : révision','Sujets types BAC Français Lettres','Annales corrigées BAC','Méthodologie complète','Entraînement chronométré','Dernière révision','Conseils pour le BAC'],
+
+  // ── ANGLAIS 3AS/BAC ──
+  'Anglais_3as_math': ['Advanced essay writing for the Baccalaureate','Reading and analyzing complex texts in English','Scientific and mathematical English vocabulary','Grammar revision : all key structures','Baccalaureate exam technique (English Math stream)','Comprehension questions strategies','Writing under timed conditions','Past BAC papers analysis and correction','Oral expression practice','Final revision and tips for the exam'],
+  'Anglais_3as_scientifique': ['Scientific text analysis in English','Advanced reading comprehension (scientific topics)','Essay writing on scientific issues','Grammar revision for advanced learners','Environment, technology and ethics in English','BAC English exam technique (Sciences stream)','Past papers analysis and correction','Comprehension and expression strategies','Oral preparation','Final revision'],
+  'Anglais_3as_lettres': ['Literary text analysis in English','Advanced essay writing (literary topics)','British and American literature revision','Grammar and stylistics revision','Translation and comparative study','BAC English exam technique (Lettres stream)','Past papers correction','Creative and academic writing','Oral expression','Final revision'],
+  'Anglais_bac_math': ['Révision : toutes les structures grammaticales','Révision : la rédaction argumentative','Révision : la compréhension écrite','Sujets types BAC Anglais (Math)','Annales corrigées BAC Anglais','Entraînement chronométré','Vocabulaire essentiel','Méthodologie BAC Anglais','Correction des erreurs fréquentes','Dernière révision et conseils'],
+  'Anglais_bac_scientifique': ['Révision grammaticale complète','Révision : rédaction et compréhension','Vocabulaire scientifique en anglais','Sujets types BAC Anglais Sciences','Annales corrigées BAC Anglais','Entraînement chronométré','Stratégies de réponse','Méthodologie BAC','Dernière révision','Conseils pour l\'examen'],
+  'Anglais_bac_lettres': ['Révision complète : grammaire et stylistique','Révision : littérature en anglais','Révision : rédaction et expression','Sujets types BAC Anglais Lettres','Annales corrigées BAC Anglais Lettres','Entraînement chronométré','Méthodologie BAC Anglais','Correction des erreurs','Dernière révision','Conseils pour le jour J'],
+
+  // ── ÉCONOMIE & DROIT 3AS/BAC Gestion ──
+  'Économie & Droit_3as_gestion': ["الإنتاج وعوامله (العمل، رأس المال، الأرض)", "توزيع الدخول (الأجور، الأرباح، الريوع، الفوائد)", "النمو الاقتصادي ونظريات التنمية", "البطالة: الأنواع، الأسباب وسياسات المكافحة", "التضخم: الأسباب، النتائج والسياسات المناهضة", "السياسة الاقتصادية للدولة (الميزانية، النقدية)", "ميزانية الدولة الجزائرية: الهيكل والتنفيذ", "العولمة الاقتصادية: الرهانات والنقاشات", "الاقتصاد الجزائري: القطاعات، التحديات والآفاق", "قانون العمل في الجزائر والعقود"],
+  'Économie & Droit_bac_gestion': ["مراجعة: النظريات الاقتصادية الكبرى", "مراجعة: السياسات الاقتصادية", "مراجعة: القانون التجاري وقانون الأعمال", "مراجعة: الاقتصاد الجزائري", "مسائل نموذجية لبكالوريا اقتصاد وقانون", "أرشيف مصحح بكالوريا اقتصاد وقانون", "دراسات حالة اقتصادية", "منهجية بكالوريا اقتصاد", "المراجعة النهائية", "نصائح للامتحان"],
+
+  // ── COMPTABILITÉ 3AS/BAC Gestion ──
+  'Comptabilité_3as_gestion': ["عمليات الخزينة (الصندوق، البنك، الأوراق التجارية)", "الاستثمارات وتمويلها (القرض، الإيجار التمويلي)", "المؤونات للمخاطر والأعباء (انخفاض قيمة الأصول)", "تسوية الأعباء والإيرادات (أعباء تدفع، إيرادات تستحق)", "حساب النتائج: الإيرادات والأعباء", "التحليل المالي: حساب وتفسير النسب", "جدول التمويل (استخدامات-موارد)", "محاسبة التكاليف التحليلية (التكاليف، الهوامش)", "الرقابة الميزانياتية (الميزانية التقديرية مقابل المحقق)", "توحيد الحسابات (مبادئ أساسية)"],
+  'Comptabilité_bac_gestion': ["مراجعة كاملة للميزانية وحساب النتائج", "مراجعة: العمليات الجارية ومحاسبتها", "مراجعة: التحليل المالي", "مسائل نموذجية لبكالوريا محاسبة", "أرشيف مصحح بكالوريا محاسبة", "تمارين عملية في المحاسبة", "دراسات حالة مؤسسات جزائرية", "منهجية بكالوريا محاسبة", "المراجعة النهائية", "نصائح للامتحان"],
+
+  // ── LITTÉRATURE ARABE 3AS/BAC Lettres ──
+  'Littérature Arabe_3as_lettres': ["الأدب العربي الحديث: النهضة والإحياء (البارودي، شوقي)", "المدرسة الكلاسيكية الحديثة (حافظ إبراهيم، أحمد شوقي)", "المدرسة الرومانسية (جبران خليل جبران، ميخائيل نعيمة)", "شعراء المهجر وأدب الاغتراب", "الشعر الحر وقصيدة النثر (بدر شاكر السياب، أدونيس)", "الرواية العربية الحديثة (نجيب محفوظ: الثلاثية)", "القصة القصيرة العربية", "الأدب الجزائري: مالك حداد، كاتب ياسين، رشيد بوجدرة", "مناهج النقد الأدبي (البنيوية، التفكيكية، الأسلوبية)", "الكتابة النقدية الأدبية: منهجية ونماذج"],
+  'Littérature Arabe_bac_lettres': ["مراجعة شاملة للأدب العربي (جاهلي، إسلامي، عباسي، أندلسي، حديث)", "الأدب الجزائري: أعلامه وخصائصه", "مناهج النقد الأدبي: مراجعة", "نماذج دراسات أدبية نقدية", "أرشيف بكالوريا مصحح (أدب عربي)", "منهجية تحليل النص الأدبي في البكالوريا", "منهجية المقال الأدبي النقدي", "نصوص متوقعة وتحليلاتها", "المراجعة النهائية", "نصائح ليوم الامتحان"],
+
+  // ── ESPAGNOL/ALLEMAND 3AS/BAC Langues ──
+  'Espagnol / Allemand_3as_langues': ["مراجعة قواعدية كاملة", "التعبير الكتابي المتقدم (المقالات، الرسائل الرسمية)", "فهم النصوص المعقدة", "مفردات موضوعاتية متقدمة (الثقافة، المجتمع، الاقتصاد)", "حضارة بلد اللغة المدروسة (التاريخ، الجغرافيا)", "أدب اللغة المدروسة (نصوص ممثلة)", "الترجمة والوساطة اللغوية", "مسائل نموذجية لبكالوريا اللغة الأجنبية", "أرشيف مصحح بكالوريا اللغة", "المنهجية ونصائح البكالوريا"],
+  'Espagnol / Allemand_bac_langues': ["مراجعة قواعدية شاملة", "المفردات الأساسية للبكالوريا", "التعبير الكتابي: مسائل تدريبية", "فهم النص: الاستراتيجيات", "الحضارة والثقافة في بلد اللغة", "مسائل نموذجية لبكالوريا اللغة الأجنبية", "أرشيف مصحح بكالوريا", "تدريب موقوت", "منهجية بكالوريا اللغة الأجنبية", "المراجعة النهائية والنصائح"],
+
+  // ── SCIENCES TECHNIQUES 3AS/BAC Technique ──
+  'Sciences Techniques_3as_technique': ["مراجعة: تحليل وتصميم الأنظمة الميكانيكية", "الآليات المعقدة (صناديق التروس، الترس التفاضلي)", "مقاومة المواد المتقدمة (الانبعاج، التعب)", "الديناميكا الحرارية المطبقة على المحركات والضواغط", "الكهروتقنية المتقدمة (الآلات الدوارة، المغيّرات)", "التنظيم والأتمتة الصناعية", "طرق التصنيع بمساعدة الحاسوب (FAO, CFAO)", "ضبط الجودة (القياس، الإحصاء)", "مسائل نموذجية لبكالوريا علوم تقنية", "أرشيف مصحح بكالوريا علوم تقنية"],
+  'Sciences Techniques_bac_technique': ["مراجعة كاملة لبرنامج علوم التقنية", "مسائل نموذجية لبكالوريا علوم تقنية", "أرشيف مصحح بكالوريا علوم تقنية", "مسائل متكاملة متعددة التخصصات", "منهجية حل المسائل التقنية", "إدارة الوقت في الامتحان", "مراجعة الآليات", "مراجعة الكهروتقنية", "مراجعة الديناميكا الحرارية", "المراجعة النهائية ونصائح البكالوريا"],
+};
+
+
+// ══════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════
+let state = { annee:null, filiere:null, matiere:null, lecon:null, diff:null, diffAr:null };
+let quizData = { questions:[], current:0, score:0 };
+
+// ══════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════
+function init() {
+  const grid = document.getElementById('optAnnee');
+  ANNEES.forEach(a => {
+    const btn = document.createElement('button');
+    btn.className = 'opt-btn';
+    btn.innerHTML = `${a.label} <small style="opacity:.6;display:block;font-family:'Tajawal'">${a.ar}</small>`;
+    btn.onclick = () => selectAnnee(a);
+    grid.appendChild(btn);
+  });
+}
+
+function selectAnnee(a) {
+  state.annee = a; state.filiere = null; state.matiere = null; state.lecon = null; state.diff = null;
+  highlightOpt('optAnnee', a.id);
+  updateSteps();
+
+  if (a.lycee && FILIERES[a.id]) {
+    showFiliere(a.id);
+    document.getElementById('grpMatiere').classList.add('hidden');
+    document.getElementById('grpLecon').classList.add('hidden');
+    document.getElementById('grpDiff').classList.add('hidden');
+  } else {
+    document.getElementById('grpFiliere').classList.add('hidden');
+    showMatiere();
+  }
+  checkCanStart();
+}
+
+function showFiliere(anneeId) {
+  const filieres = FILIERES[anneeId] || [];
+  const grid = document.getElementById('optFiliere');
+  grid.innerHTML = '';
+  filieres.forEach(f => {
+    const btn = document.createElement('button');
+    btn.className = 'opt-btn';
+    btn.innerHTML = `${f.label} <small style="opacity:.6;display:block;font-family:'Tajawal'">${f.ar}</small>`;
+    btn.onclick = () => { state.filiere = f; highlightOpt('optFiliere', f.id); showMatiere(); checkCanStart(); };
+    grid.appendChild(btn);
+  });
+  document.getElementById('grpFiliere').classList.remove('hidden');
+}
+
+function showMatiere() {
+  const key = state.annee && state.filiere ? `${state.annee.id}_${state.filiere.id}` : state.annee?.id;
+  const matieres = MATIERES[key] || MATIERES[state.annee?.id] || [];
+  const grid = document.getElementById('optMatiere');
+  grid.innerHTML = '';
+  matieres.forEach(m => {
+    const btn = document.createElement('button');
+    btn.className = 'opt-btn';
+    btn.textContent = m;
+    btn.onclick = () => { state.matiere = m; highlightOpt('optMatiere', m); showLecon(m); checkCanStart(); };
+    grid.appendChild(btn);
+  });
+  document.getElementById('grpMatiere').classList.remove('hidden');
+  document.getElementById('grpLecon').classList.add('hidden');
+  document.getElementById('grpDiff').classList.add('hidden');
+}
+
+function showLecon(matiere) {
+  const filKey = state.filiere ? `${matiere}_${state.annee.id}_${state.filiere.id}` : null;
+  const baseKey = `${matiere}_${state.annee?.id}`;
+  const lecons = LECONS[filKey] || LECONS[baseKey] || generateLeconsFallback(matiere, state.annee?.id);
+  const grid = document.getElementById('optLecon');
+  grid.innerHTML = '';
+  lecons.forEach((l,i) => {
+    const btn = document.createElement('button');
+    btn.className = 'opt-btn';
+    btn.textContent = `${i+1}. ${l}`;
+    btn.onclick = () => { state.lecon = l; highlightOpt('optLecon', l); document.getElementById('grpDiff').classList.remove('hidden'); checkCanStart(); };
+    btn.style.cssText = 'font-size:0.8rem;text-align:left;';
+    grid.appendChild(btn);
+  });
+  document.getElementById('grpLecon').classList.remove('hidden');
+  document.getElementById('grpDiff').classList.add('hidden');
+}
+
+function generateLeconsFallback(matiere, annee) {
+  return [`Introduction à ${matiere}`,`Les bases de ${matiere}`,`Concepts fondamentaux`,`Approfondissement`,`Applications pratiques`,`Exercices types`,`Révision générale`];
+}
+
+function selectDiff(fr, ar) {
+  state.diff = fr; state.diffAr = ar;
+  document.querySelectorAll('.opt-btn[class*="diff-"]').forEach(b => b.classList.remove('selected'));
+  event.target.classList.add('selected');
+  checkCanStart();
+}
+
+function highlightOpt(gridId, val) {
+  document.querySelectorAll(`#${gridId} .opt-btn`).forEach(b => {
+    b.classList.toggle('selected', b.textContent.includes(val) || b.dataset.id === val);
+  });
+}
+
+function updateSteps() {
+  const s = [!!state.annee, !!state.filiere || !state.annee?.lycee, !!state.matiere, !!state.lecon, !!state.diff];
+  document.querySelectorAll('.step').forEach((el,i) => {
+    el.classList.toggle('active', i === s.filter(Boolean).length);
+    el.classList.toggle('done', i < s.filter(Boolean).length);
+  });
+}
+
+function checkCanStart() {
+  updateSteps();
+  const needFiliere = state.annee?.lycee;
+  const ready = state.annee && (!needFiliere || state.filiere) && state.matiere && state.lecon && state.diff;
+  document.getElementById('btnStart').disabled = !ready;
+}
+
+// ══════════════════════════════════════════
+// QUIZ GENERATION — via backend sécurisé
+// ══════════════════════════════════════════
+const API = 'https://edumind-api.onrender.com';
+
+async function startQuiz() {
+  document.getElementById('setupCard').style.display = 'none';
+  document.getElementById('loadingOverlay').classList.add('show');
+
+  const token = localStorage.getItem('token');
+  try {
+    const res = await fetch(`${API}/api/ia/quiz`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({
+        annee:      state.annee?.label,
+        filiere:    state.filiere?.label || '',
+        matiere:    state.matiere,
+        lecon:      state.lecon,
+        difficulte: state.diff
+      })
+    });
+    const data = await res.json();
+
+    document.getElementById('loadingOverlay').classList.remove('show');
+
+    if (!res.ok) {
       // Clé API manquante → fallback
       useFallbackQuiz(); return;
     }
