@@ -65,7 +65,11 @@ const callGemini = async (prompt, maxTokens) => {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.7, maxOutputTokens: maxTokens || 2500 }
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: maxTokens || 2500,
+        responseMimeType: 'application/json'
+      }
     })
   });
   const d = await r.json();
@@ -187,15 +191,20 @@ app.post('/api/ia/quiz', auth, async (req, res) => {
 
     let prompt;
     if (isMathPhys) {
-      prompt = `Tu es un professeur du programme scolaire algerien. Genere 4 exercices pour: ${ctx}
-IMPORTANT: Reponds avec UNIQUEMENT du JSON valide. Pas d'apostrophes dans le JSON, utilise des espaces a la place. Commence directement par le caractere {
-{"exercices":[{"numero":1,"titre":"Titre","enonce":"Enonce complet de exercice","donnees":"Donnees numeriques","questions":["1) Question un","2) Question deux"],"correction":"Correction etape par etape","bareme":5},{"numero":2,"titre":"Titre 2","enonce":"Enonce 2","donnees":"","questions":["1) Q1","2) Q2"],"correction":"Correction 2","bareme":5},{"numero":3,"titre":"Titre 3","enonce":"Enonce 3","donnees":"","questions":["1) Q1"],"correction":"Correction 3","bareme":5},{"numero":4,"titre":"Titre 4","enonce":"Enonce 4","donnees":"","questions":["1) Q1"],"correction":"Correction 4","bareme":5}]}`;
+      prompt = `Tu es un professeur expert du programme scolaire algerien.
+Genere 4 exercices de ${matiere} niveau ${difficulte} sur la lecon "${lecon}" pour ${annee}${filiere ? ' filiere ' + filiere : ''}.
+Retourne un objet JSON avec cette structure exacte:
+{"exercices":[{"numero":1,"titre":"titre","enonce":"enonce","donnees":"donnees ou vide","questions":["1) q1","2) q2"],"correction":"correction detaillee","bareme":5}]}
+Genere exactement 4 exercices adaptes au programme algerien.`;
     } else {
       const arabe = ['Arabe', 'Éducation Islamique', 'Littérature Arabe'].includes(matiere);
-      prompt = `Tu es un professeur du programme scolaire algerien. Genere 8 QCM pour: ${ctx}
-${arabe ? 'Questions en arabe.' : 'Questions en francais.'}
-IMPORTANT: Reponds avec UNIQUEMENT du JSON valide. Evite les apostrophes, utilise des espaces. Commence directement par {
-{"questions":[{"question":"Question 1 ?","options":["A) option","B) option","C) option","D) option"],"correct":0,"explication":"explication 1"},{"question":"Question 2 ?","options":["A) option","B) option","C) option","D) option"],"correct":1,"explication":"explication 2"},{"question":"Question 3 ?","options":["A) option","B) option","C) option","D) option"],"correct":2,"explication":"explication 3"},{"question":"Question 4 ?","options":["A) option","B) option","C) option","D) option"],"correct":0,"explication":"explication 4"},{"question":"Question 5 ?","options":["A) option","B) option","C) option","D) option"],"correct":3,"explication":"explication 5"},{"question":"Question 6 ?","options":["A) option","B) option","C) option","D) option"],"correct":1,"explication":"explication 6"},{"question":"Question 7 ?","options":["A) option","B) option","C) option","D) option"],"correct":2,"explication":"explication 7"},{"question":"Question 8 ?","options":["A) option","B) option","C) option","D) option"],"correct":0,"explication":"explication 8"}]}`;
+      prompt = `Tu es un professeur expert du programme scolaire algerien.
+Genere 8 questions QCM de ${matiere} niveau ${difficulte} sur la lecon "${lecon}" pour ${annee}${filiere ? ' filiere ' + filiere : ''}.
+${arabe ? 'Les questions doivent etre en arabe.' : 'Les questions doivent etre en francais.'}
+Retourne un objet JSON avec cette structure exacte:
+{"questions":[{"question":"question ?","options":["A) rep1","B) rep2","C) rep3","D) rep4"],"correct":0,"explication":"explication"}]}
+correct est l index 0 1 2 ou 3 de la bonne reponse.
+Genere exactement 8 questions variees et pedagogiques selon le programme algerien.`;
     }
 
     const text   = await callGemini(prompt, 3000);
