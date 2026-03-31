@@ -266,4 +266,4 @@ app.get('/api/health', (_, res) => res.json({ status: 'ok', message: 'EDUMIND IA
 app.listen(process.env.PORT || 5000, () => {
   console.log(`🚀 EDUMIND Backend running on port ${process.env.PORT || 5000}`);
 });
-  
+
