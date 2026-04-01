@@ -1,19 +1,20 @@
 require('dotenv').config();
-var express  = require('express');
-var mongoose = require('mongoose');
-var cors     = require('cors');
-var jwt      = require('jsonwebtoken');
-var bcrypt   = require('bcryptjs');
+const express  = require('express');
+const mongoose = require('mongoose');
+const cors     = require('cors');
+const jwt      = require('jsonwebtoken');
+const bcrypt   = require('bcryptjs');
 
-var app = express();
+const app = express();
 app.use(cors({ origin: '*' }));
 app.use(express.json());
 
 mongoose.connect(process.env.MONGO_URL || 'mongodb://localhost:27017/edumind')
-  .then(function() { console.log('MongoDB connected'); })
-  .catch(function(err) { console.error('MongoDB error', err); });
+  .then(() => console.log('✅ MongoDB connected'))
+  .catch(err => console.error('❌ MongoDB error:', err));
 
-var userSchema = new mongoose.Schema({
+// ── MODELS ──
+const userSchema = new mongoose.Schema({
   firstName:      { type: String, required: true },
   lastName:       { type: String, required: true },
   email:          { type: String, required: true, unique: true, lowercase: true },
@@ -22,250 +23,400 @@ var userSchema = new mongoose.Schema({
   compareVisible: { type: Boolean, default: true },
   createdAt:      { type: Date, default: Date.now }
 });
-var friendRequestSchema = new mongoose.Schema({
+const friendRequestSchema = new mongoose.Schema({
   from:      { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   to:        { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   status:    { type: String, enum: ['pending','accepted','declined'], default: 'pending' },
   createdAt: { type: Date, default: Date.now }
 });
-var quizResultSchema = new mongoose.Schema({
-  userId:  { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  annee: String, filiere: String, matiere: String, lecon: String,
-  score: Number, total: Number,
-  points:  { type: Number, default: 0 },
-  isMath:  { type: Boolean, default: false },
-  date:    { type: Date, default: Date.now }
+const quizResultSchema = new mongoose.Schema({
+  userId:   { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  annee:    String, filiere: String, matiere: String, lecon: String,
+  score:    Number, total: Number,
+  points:   { type: Number, default: 0 },
+  isMath:   { type: Boolean, default: false },
+  date:     { type: Date, default: Date.now }
 });
-var User       = mongoose.model('User', userSchema);
-var FriendReq  = mongoose.model('FriendRequest', friendRequestSchema);
-var QuizResult = mongoose.model('QuizResult', quizResultSchema);
+const User       = mongoose.model('User', userSchema);
+const FriendReq  = mongoose.model('FriendRequest', friendRequestSchema);
+const QuizResult = mongoose.model('QuizResult', quizResultSchema);
 
-var JWT_SECRET = process.env.JWT_SECRET || 'edumind_secret_key';
-function makeToken(id) { return jwt.sign({ id: id }, JWT_SECRET, { expiresIn: '30d' }); }
-async function auth(req, res, next) {
-  var token = (req.headers.authorization || '').replace('Bearer ', '');
+// ── AUTH ──
+const JWT_SECRET = process.env.JWT_SECRET || 'edumind_secret_key';
+const makeToken  = id => jwt.sign({ id }, JWT_SECRET, { expiresIn: '30d' });
+const auth = async (req, res, next) => {
+  const token = (req.headers.authorization || '').replace('Bearer ', '');
   if (!token) return res.status(401).json({ message: 'Non authentifie' });
   try {
-    var decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = jwt.verify(token, JWT_SECRET);
     req.user = await User.findById(decoded.id).select('-password');
     if (!req.user) return res.status(401).json({ message: 'Utilisateur introuvable' });
     next();
-  } catch(e) { res.status(401).json({ message: 'Token invalide' }); }
-}
+  } catch { res.status(401).json({ message: 'Token invalide' }); }
+};
 
-var GROQ_URL   = 'https://api.groq.com/openai/v1/chat/completions';
-var GROQ_MODEL = 'llama-3.3-70b-versatile';
-async function callGroq(sys, usr, jsonMode) {
-  var key = process.env.GROQ_API_KEY;
-  if (!key) throw new Error('GROQ_API_KEY manquante');
-  var body = { model: GROQ_MODEL, temperature: 0.5, max_tokens: 3000,
-    messages: [{ role: 'system', content: sys }, { role: 'user', content: usr }] };
+// ── GROQ ──
+const GROQ_MODEL = 'llama-3.3-70b-versatile';
+const GROQ_URL   = 'https://api.groq.com/openai/v1/chat/completions';
+
+const callGroq = async (systemPrompt, userPrompt, jsonMode = false) => {
+  const key = process.env.GROQ_API_KEY;
+  if (!key) throw new Error('GROQ_API_KEY manquante sur Render');
+  const body = {
+    model: GROQ_MODEL,
+    temperature: 0.5,
+    max_tokens: 3000,
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user',   content: userPrompt   }
+    ]
+  };
   if (jsonMode) body.response_format = { type: 'json_object' };
-  var r = await fetch(GROQ_URL, { method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
-    body: JSON.stringify(body) });
-  var d = await r.json();
-  if (!r.ok) throw new Error((d.error && d.error.message) || ('Groq error ' + r.status));
-  var t = d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content;
-  if (!t) throw new Error('Reponse Groq vide');
-  return t;
-}
-function extractJSON(text) {
-  var c = text.replace(/```json/g, '').replace(/```/g, '').trim();
-  var a = c.indexOf('{'); var b = c.lastIndexOf('}');
-  if (a === -1 || b === -1) throw new Error('Pas de JSON');
-  return JSON.parse(c.substring(a, b + 1));
-}
+  const r = await fetch(GROQ_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+    body: JSON.stringify(body)
+  });
+  const d = await r.json();
+  if (!r.ok) throw new Error(d.error?.message || 'Erreur Groq ' + r.status);
+  const text = d.choices?.[0]?.message?.content || '';
+  if (!text) throw new Error('Groq a retourne une reponse vide');
+  return text;
+};
 
-app.post('/api/auth/register', async function(req, res) {
+const extractJSON = (text) => {
+  const clean = text.replace(/```json/g, '').replace(/```/g, '').trim();
+  const a = clean.indexOf('{');
+  const b = clean.lastIndexOf('}');
+  if (a === -1 || b === -1) throw new Error('Aucun JSON dans la reponse');
+  try { return JSON.parse(clean.substring(a, b + 1)); }
+  catch (e) { throw new Error('JSON invalide: ' + e.message); }
+};
+
+// ── AUTH ROUTES ──
+app.post('/api/auth/register', async (req, res) => {
   try {
-    var fn = req.body.firstName, ln = req.body.lastName, em = req.body.email, pw = req.body.password;
-    if (!fn || !ln || !em || !pw) return res.status(400).json({ message: 'Champs obligatoires' });
-    if (await User.findOne({ email: em })) return res.status(400).json({ message: 'Email deja utilise' });
-    var h = await bcrypt.hash(pw, 12);
-    var u = await User.create({ firstName: fn, lastName: ln, email: em, password: h });
-    res.status(201).json({ token: makeToken(u._id), user: { id: u._id, firstName: fn, lastName: ln, email: em } });
-  } catch(e) { res.status(500).json({ message: e.message }); }
+    const { firstName, lastName, email, password } = req.body;
+    if (!firstName || !lastName || !email || !password)
+      return res.status(400).json({ message: 'Tous les champs sont obligatoires' });
+    if (await User.findOne({ email }))
+      return res.status(400).json({ message: 'Email deja utilise' });
+    const hashed = await bcrypt.hash(password, 12);
+    const user   = await User.create({ firstName, lastName, email, password: hashed });
+    res.status(201).json({ token: makeToken(user._id), user: { id: user._id, firstName, lastName, email } });
+  } catch (e) { res.status(500).json({ message: e.message }); }
 });
-app.post('/api/auth/login', async function(req, res) {
+
+app.post('/api/auth/login', async (req, res) => {
   try {
-    var u = await User.findOne({ email: req.body.email });
-    if (!u || !(await bcrypt.compare(req.body.password, u.password)))
+    const { email, password } = req.body;
+    const user = await User.findOne({ email });
+    if (!user || !(await bcrypt.compare(password, user.password)))
       return res.status(400).json({ message: 'Email ou mot de passe incorrect' });
-    res.json({ token: makeToken(u._id), user: { id: u._id, firstName: u.firstName, lastName: u.lastName, email: u.email } });
-  } catch(e) { res.status(500).json({ message: e.message }); }
+    res.json({ token: makeToken(user._id), user: { id: user._id, firstName: user.firstName, lastName: user.lastName, email: user.email } });
+  } catch (e) { res.status(500).json({ message: e.message }); }
 });
-app.get('/api/stats', auth, async function(req, res) {
+
+// ── STATS DASHBOARD ──
+app.get('/api/stats', auth, async (req, res) => {
   try {
-    var results = await QuizResult.find({ userId: req.user._id });
-    var totalPoints = results.reduce(function(s, r) { return s + (r.points || 0); }, 0);
-    var ds = {}; results.forEach(function(r) { ds[r.date.toDateString()] = true; });
-    var dates = Object.keys(ds).sort();
-    var streak = 0;
+    const results     = await QuizResult.find({ userId: req.user._id });
+    const totalPoints = results.reduce((s, r) => s + (r.points || 0), 0);
+    const dates       = [...new Set(results.map(r => r.date.toDateString()))].sort();
+    let streak = 0;
     if (dates.length) {
       streak = 1;
-      for (var i = dates.length - 1; i > 0; i--) {
-        if ((new Date(dates[i]) - new Date(dates[i - 1])) / 86400000 === 1) streak++;
+      for (let i = dates.length - 1; i > 0; i--) {
+        if ((new Date(dates[i]) - new Date(dates[i-1])) / 86400000 === 1) streak++;
         else break;
       }
     }
-    res.json({ totalPoints: totalPoints, quizCompleted: results.length, streak: streak });
-  } catch(e) { res.status(500).json({ message: e.message }); }
+    res.json({ totalPoints, quizCompleted: results.length, streak });
+  } catch (e) { res.status(500).json({ message: e.message }); }
 });
-app.get('/api/stats/profile', auth, async function(req, res) {
+
+// ── STATS PROFILE COMPLET ──
+app.get('/api/stats/profile', auth, async (req, res) => {
   try {
-    var results = await QuizResult.find({ userId: req.user._id }).sort({ date: 1 });
-    var totalPoints = results.reduce(function(s, r) { return s + (r.points || 0); }, 0);
-    var prime = 0;
-    results.forEach(function(r) { if (r.total > 0) { var p = Math.round((r.score / r.total) * 100); if (p > prime) prime = p; } });
-    var bm = {};
-    results.forEach(function(r) { if (r.matiere) bm[r.matiere] = (bm[r.matiere] || 0) + (r.points || 0); });
-    var mr = Object.keys(bm).map(function(k) { return { name: k, pts: bm[k] }; }).sort(function(a, b) { return b.pts - a.pts; });
-    var now = new Date(); var labels = []; var data = [];
-    for (var w = 7; w >= 0; w--) {
-      var ws = new Date(now); ws.setDate(now.getDate() - w * 7); ws.setHours(0, 0, 0, 0);
-      var we = new Date(ws); we.setDate(ws.getDate() + 7);
-      labels.push('S' + (8 - w));
-      data.push(results.filter(function(r) { return new Date(r.date) >= ws && new Date(r.date) < we; }).reduce(function(s, r) { return s + (r.points || 0); }, 0));
+    const results = await QuizResult.find({ userId: req.user._id }).sort({ date: 1 });
+
+    // Points totaux
+    const totalPoints = results.reduce((s, r) => s + (r.points || 0), 0);
+
+    // Nombre de quiz
+    const quizCompleted = results.length;
+
+    // PRIME = meilleur score en % jamais obtenu
+    const prime = results.length
+      ? Math.max(...results.map(r => r.total > 0 ? Math.round((r.score / r.total) * 100) : 0))
+      : 0;
+
+    // Classement des matières par points
+    const byMatiere = {};
+    results.forEach(r => {
+      if (r.matiere) byMatiere[r.matiere] = (byMatiere[r.matiere] || 0) + (r.points || 0);
+    });
+    const matiereRanking = Object.entries(byMatiere)
+      .sort((a, b) => b[1] - a[1])
+      .map(([name, pts]) => ({ name, pts }));
+
+    // Evolution par semaine (8 dernières semaines)
+    const now = new Date();
+    const weeklyData = {};
+    for (let w = 7; w >= 0; w--) {
+      const weekStart = new Date(now);
+      weekStart.setDate(now.getDate() - w * 7);
+      weekStart.setHours(0,0,0,0);
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 7);
+      const label = `S${8-w}`;
+      weeklyData[label] = results
+        .filter(r => new Date(r.date) >= weekStart && new Date(r.date) < weekEnd)
+        .reduce((s, r) => s + (r.points || 0), 0);
     }
-    var tw = data[data.length - 1] || 0; var pw = data[data.length - 2] || 0;
-    var progress = pw > 0 ? Math.round(((tw - pw) / pw) * 100) : (tw > 0 ? 100 : 0);
-    res.json({ totalPoints: totalPoints, quizCompleted: results.length, prime: prime, matiereRanking: mr, evolution: { labels: labels, data: data }, progress: progress });
-  } catch(e) { res.status(500).json({ message: e.message }); }
+    const evolution = {
+      labels: Object.keys(weeklyData),
+      data:   Object.values(weeklyData)
+    };
+
+    // Progression: semaine actuelle vs semaine precedente
+    const thisWeek = Object.values(weeklyData).slice(-1)[0] || 0;
+    const prevWeek = Object.values(weeklyData).slice(-2, -1)[0] || 0;
+    let progress = 0;
+    if (prevWeek > 0) progress = Math.round(((thisWeek - prevWeek) / prevWeek) * 100);
+    else if (thisWeek > 0) progress = 100;
+
+    res.json({ totalPoints, quizCompleted, prime, matiereRanking, evolution, progress });
+  } catch (e) { res.status(500).json({ message: e.message }); }
 });
-app.post('/api/quiz/submit', auth, async function(req, res) {
+
+// ── QUIZ SUBMIT ──
+app.post('/api/quiz/submit', auth, async (req, res) => {
   try {
-    var b = req.body;
-    await QuizResult.create({ userId: req.user._id, score: b.score, total: b.total, matiere: b.matiere,
-      lecon: b.lecon, annee: b.annee, filiere: b.filiere, points: b.points || b.score * 10, isMath: b.isMath || false });
+    const { score, total, matiere, lecon, annee, filiere, points, isMath } = req.body;
+    await QuizResult.create({
+      userId: req.user._id, score, total, matiere, lecon, annee, filiere,
+      points: points || score * 10,
+      isMath: isMath || false
+    });
     res.status(201).json({ message: 'Score enregistre' });
-  } catch(e) { res.status(500).json({ message: e.message }); }
+  } catch (e) { res.status(500).json({ message: e.message }); }
 });
-app.post('/api/ia/chat', auth, async function(req, res) {
+
+// ── IA CHAT ──
+app.post('/api/ia/chat', auth, async (req, res) => {
   try {
-    if (!process.env.GROQ_API_KEY) return res.status(500).json({ message: 'GROQ_API_KEY manquante' });
-    var msgs = req.body.messages || [];
-    var parts = [];
-    if (req.body.annee)   parts.push('Annee: ' + req.body.annee);
-    if (req.body.filiere) parts.push('Filiere: ' + req.body.filiere);
-    if (req.body.matiere) parts.push('Matiere: ' + req.body.matiere);
-    var ctx = parts.join(' | ');
-    var lastContent = msgs.length > 0 ? (msgs[msgs.length - 1].content || '') : '';
-    var sys = 'Tu es un professeur expert du programme scolaire algerien (ONEC). ' +
-      (ctx ? 'Contexte: ' + ctx + '. ' : '') +
-      'Reponds selon la methodologie algerienne. Arabe/Islam = arabe, sinon francais. ' +
-      'Structure: definition, explication, exemple algerien, regle.';
-    var reply = await callGroq(sys, lastContent, false);
-    res.json({ reply: reply });
-  } catch(e) { res.status(500).json({ message: e.message }); }
+    if (!process.env.GROQ_API_KEY)
+      return res.status(500).json({ message: 'GROQ_API_KEY manquante sur Render' });
+    const { messages, annee, filiere, matiere } = req.body;
+    const ctx     = [annee&&`Annee: ${annee}`, filiere&&`Filiere: ${filiere}`, matiere&&`Matiere: ${matiere}`].filter(Boolean).join(' | ');
+    const lastMsg = (messages || []).slice(-1)[0]?.content || '';
+    const systemPrompt = `Tu es un professeur expert du programme scolaire algerien officiel (ONEC).
+${ctx ? 'Contexte eleve: ' + ctx : ''}
+Regles: Reponds selon la methodologie algerienne. Si Arabe ou Education Islamique reponds en arabe, sinon en francais.
+Structure: definition, explication, exemple algerien concret, regle a retenir. Sois pedagogique et encourageant.`;
+    const reply = await callGroq(systemPrompt, lastMsg, false);
+    res.json({ reply });
+  } catch (e) { res.status(500).json({ message: e.message }); }
 });
-app.post('/api/ia/quiz', auth, async function(req, res) {
+
+// ── IA QUIZ ──
+app.post('/api/ia/quiz', auth, async (req, res) => {
   try {
-    if (!process.env.GROQ_API_KEY) return res.status(500).json({ message: 'GROQ_API_KEY manquante' });
-    var b = req.body;
-    var isMath = ['Mathematiques', 'Physique-Chimie', 'Sciences Techniques'].indexOf(b.matiere) !== -1;
-    var ctx = b.annee + (b.filiere ? ' ' + b.filiere : '') + ' - ' + b.matiere + ' - ' + b.lecon + ' - ' + b.difficulte;
-    var sys = 'Prof algerien ONEC. Reponds en JSON valide uniquement, sans markdown.';
-    var prompt;
-    if (isMath) {
-      prompt = 'Cree 4 exercices de ' + b.matiere + ' pour ' + ctx + '. Maths en texte simple (/ ^ racine()). JSON: {"exercices":[{"numero":1,"titre":"titre","enonce":"enonce","donnees":"","questions":["1) question"],"correction":"correction","bareme":5},{"numero":2,"titre":"titre","enonce":"enonce","donnees":"","questions":["1) question"],"correction":"correction","bareme":5},{"numero":3,"titre":"titre","enonce":"enonce","donnees":"","questions":["1) question"],"correction":"correction","bareme":5},{"numero":4,"titre":"titre","enonce":"enonce","donnees":"","questions":["1) question"],"correction":"correction","bareme":5}]}';
+    if (!process.env.GROQ_API_KEY)
+      return res.status(500).json({ message: 'GROQ_API_KEY manquante sur Render' });
+    const { annee, filiere, matiere, lecon, difficulte } = req.body;
+    const isMathPhys = ['Mathematiques','Mathématiques','Physique-Chimie','Sciences Techniques'].includes(matiere);
+    const ctx = `${annee}${filiere?' '+filiere:''} - ${matiere} - ${lecon} - niveau ${difficulte}`;
+    const systemPrompt = `Tu es un professeur expert du programme scolaire algerien officiel (ONEC).
+Tu generes des questions STRICTEMENT conformes au programme algerien.
+Tu reponds UNIQUEMENT en JSON valide, sans markdown, sans texte avant ou apres.`;
+    let userPrompt;
+    if (isMathPhys) {
+      userPrompt = `Cree 4 exercices de ${matiere} pour: ${ctx}
+Ecris les enonces, questions et corrections EN ARABE. Ecris les maths en texte simple: / pour fractions, ^ pour puissances, racine() pour racines. PAS de LaTeX.
+Retourne ce JSON:
+{
+  "exercices": [
+    {"numero": 1, "titre": "عنوان التمرين", "enonce": "نص التمرين بالعربية", "donnees": "المعطيات", "questions": ["1) السؤال الأول","2) السؤال الثاني"], "correction": "التصحيح التفصيلي بالعربية", "bareme": 5},
+    {"numero": 2, "titre": "...", "enonce": "...", "donnees": "...", "questions": ["1) ..."], "correction": "...", "bareme": 5},
+    {"numero": 3, "titre": "...", "enonce": "...", "donnees": "...", "questions": ["1) ..."], "correction": "...", "bareme": 5},
+    {"numero": 4, "titre": "...", "enonce": "...", "donnees": "...", "questions": ["1) ..."], "correction": "...", "bareme": 5}
+  ]
+}`;
     } else {
-      var lang = 'en arabe classique (langue arabe soutenue)';
-      if (b.matiere === 'Francais') lang = 'en francais';
-      if (b.matiere === 'Anglais')  lang = 'in English';
-      if (b.matiere === 'Espagnol') lang = 'en espanol';
-      if (b.matiere === 'Allemand') lang = 'auf Deutsch';
-      prompt = 'Cree 8 QCM sur ' + ctx + '. ' + lang + '. JSON: {"questions":[{"question":"q1","options":["A) a","B) b","C) c","D) d"],"correct":0,"explication":"exp"},{"question":"q2","options":["A) a","B) b","C) c","D) d"],"correct":1,"explication":"exp"},{"question":"q3","options":["A) a","B) b","C) c","D) d"],"correct":2,"explication":"exp"},{"question":"q4","options":["A) a","B) b","C) c","D) d"],"correct":0,"explication":"exp"},{"question":"q5","options":["A) a","B) b","C) c","D) d"],"correct":3,"explication":"exp"},{"question":"q6","options":["A) a","B) b","C) c","D) d"],"correct":1,"explication":"exp"},{"question":"q7","options":["A) a","B) b","C) c","D) d"],"correct":2,"explication":"exp"},{"question":"q8","options":["A) a","B) b","C) c","D) d"],"correct":0,"explication":"exp"}]}';
+      // Langue des questions selon la matière
+      const langMatiere = matiere.toLowerCase();
+      let langInstruction;
+      if (langMatiere === 'francais' || langMatiere === 'français') {
+        langInstruction = 'Les questions et reponses doivent etre en FRANCAIS.';
+      } else if (langMatiere === 'anglais') {
+        langInstruction = 'Questions and answers must be in ENGLISH.';
+      } else if (langMatiere === 'espagnol') {
+        langInstruction = 'Las preguntas y respuestas deben estar en ESPANOL.';
+      } else if (langMatiere === 'allemand') {
+        langInstruction = 'Die Fragen und Antworten muessen auf DEUTSCH sein.';
+      } else {
+        // Toutes les autres matières → ARABE
+        langInstruction = 'يجب أن تكون الأسئلة والإجابات والشرح باللغة العربية الفصحى.';
+      }
+      userPrompt = `Cree 8 questions QCM sur: ${ctx}
+${langInstruction}
+Retourne ce JSON:
+{
+  "questions": [
+    {"question": "السؤال الأول؟", "options": ["أ) ...", "ب) ...", "ج) ...", "د) ..."], "correct": 0, "explication": "الشرح"},
+    {"question": "السؤال الثاني؟", "options": ["أ) ...", "ب) ...", "ج) ...", "د) ..."], "correct": 1, "explication": "الشرح"},
+    {"question": "السؤال الثالث؟", "options": ["أ) ...", "ب) ...", "ج) ...", "د) ..."], "correct": 2, "explication": "الشرح"},
+    {"question": "السؤال الرابع؟", "options": ["أ) ...", "ب) ...", "ج) ...", "د) ..."], "correct": 0, "explication": "الشرح"},
+    {"question": "السؤال الخامس؟", "options": ["أ) ...", "ب) ...", "ج) ...", "د) ..."], "correct": 3, "explication": "الشرح"},
+    {"question": "السؤال السادس؟", "options": ["أ) ...", "ب) ...", "ج) ...", "د) ..."], "correct": 1, "explication": "الشرح"},
+    {"question": "السؤال السابع؟", "options": ["أ) ...", "ب) ...", "ج) ...", "د) ..."], "correct": 2, "explication": "الشرح"},
+    {"question": "السؤال الثامن؟", "options": ["أ) ...", "ب) ...", "ج) ...", "د) ..."], "correct": 0, "explication": "الشرح"}
+  ]
+}`;
     }
-    var text = await callGroq(sys, prompt, true);
-    var parsed = extractJSON(text);
-    if (!parsed.questions && !parsed.exercices) throw new Error('JSON invalide');
-    parsed.isMathPhys = isMath;
+    const text   = await callGroq(systemPrompt, userPrompt, true);
+    const parsed = extractJSON(text);
+    if (!parsed.questions && !parsed.exercices)
+      throw new Error('Structure JSON incorrecte');
+    res.json({ ...parsed, isMathPhys });
+  } catch (e) { res.status(500).json({ message: 'Erreur generation: ' + e.message }); }
+});
+
+// ── IA EVALUATION EXERCICE MATH ──
+app.post('/api/ia/evaluate', auth, async (req, res) => {
+  try {
+    if (!process.env.GROQ_API_KEY)
+      return res.status(500).json({ message: 'GROQ_API_KEY manquante' });
+
+    const { enonce, donnees, questions, correction, studentAnswer, bareme, matiere, annee } = req.body;
+
+    const systemPrompt = `Tu es un professeur correcteur expert du programme scolaire algerien officiel.
+Tu corriges les reponses des eleves avec bienveillance et precision.
+Tu reponds UNIQUEMENT en JSON valide.`;
+
+    const userPrompt = `Exercice de ${matiere} (${annee}):
+Enonce: ${enonce}
+${donnees ? 'Donnees: ' + donnees : ''}
+Questions: ${(questions||[]).join(' | ')}
+Correction officielle: ${correction}
+Bareme: ${bareme} points
+
+Reponse de l'eleve: ${studentAnswer}
+
+Evalue la reponse de l'eleve. Retourne ce JSON:
+{
+  "points_obtenus": <nombre entre 0 et ${bareme}>,
+  "note_sur_20": <note sur 20>,
+  "appreciation": "<Excellent/Tres bien/Bien/Passable/A revoir>",
+  "correction_detaillee": "<correction etape par etape en comparant avec la reponse de l'eleve>",
+  "points_positifs": "<ce que l'eleve a bien fait>",
+  "points_ameliorer": "<ce que l'eleve doit ameliorer>",
+  "encouragement": "<message encourageant en arabe et francais>"
+}`;
+
+    const text   = await callGroq(systemPrompt, userPrompt, true);
+    const parsed = extractJSON(text);
     res.json(parsed);
-  } catch(e) { res.status(500).json({ message: 'Erreur: ' + e.message }); }
+  } catch (e) { res.status(500).json({ message: 'Erreur evaluation: ' + e.message }); }
 });
-app.post('/api/ia/evaluate', auth, async function(req, res) {
+
+// ── AMIS ──
+app.get('/api/users/search', auth, async (req, res) => {
   try {
-    if (!process.env.GROQ_API_KEY) return res.status(500).json({ message: 'GROQ_API_KEY manquante' });
-    var b = req.body;
-    var sys = 'Correcteur algerien ONEC. JSON valide uniquement.';
-    var prompt = 'Exercice ' + b.matiere + ' (' + b.annee + '). Enonce: ' + b.enonce + '. ' +
-      (b.donnees ? 'Donnees: ' + b.donnees + '. ' : '') +
-      'Questions: ' + (b.questions || []).join(' | ') + '. ' +
-      'Correction: ' + b.correction + '. Bareme: ' + b.bareme + '. ' +
-      'Reponse eleve: ' + b.studentAnswer + '. ' +
-      'JSON: {"points_obtenus":0,"note_sur_20":0,"appreciation":"...","correction_detaillee":"...","points_positifs":"...","points_ameliorer":"...","encouragement":"..."}';
-    res.json(extractJSON(await callGroq(sys, prompt, true)));
-  } catch(e) { res.status(500).json({ message: e.message }); }
-});
-app.get('/api/users/search', auth, async function(req, res) {
-  try {
-    var q = (req.query.q || '').trim(); if (q.length < 2) return res.json([]);
-    var mf = req.user.friends.map(function(f) { return f.toString(); });
-    var users = await User.find({ _id: { $ne: req.user._id },
+    const q = (req.query.q || '').trim();
+    if (q.length < 2) return res.json([]);
+    const myFriends = req.user.friends.map(f => f.toString());
+    const users = await User.find({
+      _id: { $ne: req.user._id },
       $or: [{ firstName: { $regex: q, $options: 'i' } }, { lastName: { $regex: q, $options: 'i' } }]
     }).select('firstName lastName').limit(8);
-    var enriched = await Promise.all(users.map(async function(u) {
-      var pr = await FriendReq.findOne({ from: req.user._id, to: u._id, status: 'pending' });
-      return { id: u._id, firstName: u.firstName, lastName: u.lastName, isFriend: mf.indexOf(u._id.toString()) !== -1, requestSent: !!pr };
+    const enriched = await Promise.all(users.map(async u => {
+      const isFriend   = myFriends.includes(u._id.toString());
+      const pendingReq = await FriendReq.findOne({ from: req.user._id, to: u._id, status: 'pending' });
+      return { id: u._id, firstName: u.firstName, lastName: u.lastName, isFriend, requestSent: !!pendingReq };
     }));
     res.json(enriched);
-  } catch(e) { res.status(500).json({ message: e.message }); }
+  } catch (e) { res.status(500).json({ message: e.message }); }
 });
-app.post('/api/friends/request', auth, async function(req, res) {
+
+app.post('/api/friends/request', auth, async (req, res) => {
   try {
-    var tid = req.body.toUserId;
-    if (tid === req.user._id.toString()) return res.status(400).json({ message: 'Tu ne peux pas t ajouter toi-meme' });
-    var t = await User.findById(tid); if (!t) return res.status(404).json({ message: 'Introuvable' });
-    if (req.user.friends.map(function(f) { return f.toString(); }).indexOf(tid) !== -1) return res.status(400).json({ message: 'Deja amis' });
-    if (await FriendReq.findOne({ from: req.user._id, to: tid, status: 'pending' })) return res.status(400).json({ message: 'Deja envoye' });
-    await FriendReq.create({ from: req.user._id, to: tid });
-    res.json({ message: 'Demande envoyee a ' + t.firstName + ' ' + t.lastName });
-  } catch(e) { res.status(500).json({ message: e.message }); }
+    const { toUserId } = req.body;
+    if (toUserId === req.user._id.toString())
+      return res.status(400).json({ message: 'Tu ne peux pas t ajouter toi-meme' });
+    const target = await User.findById(toUserId);
+    if (!target) return res.status(404).json({ message: 'Utilisateur introuvable' });
+    if (req.user.friends.map(f => f.toString()).includes(toUserId))
+      return res.status(400).json({ message: 'Deja amis' });
+    const existing = await FriendReq.findOne({ from: req.user._id, to: toUserId, status: 'pending' });
+    if (existing) return res.status(400).json({ message: 'Demande deja envoyee' });
+    await FriendReq.create({ from: req.user._id, to: toUserId });
+    res.json({ message: `Demande envoyee a ${target.firstName} ${target.lastName} !` });
+  } catch (e) { res.status(500).json({ message: e.message }); }
 });
-app.get('/api/friends/requests', auth, async function(req, res) {
-  try { res.json(await FriendReq.find({ to: req.user._id, status: 'pending' }).populate('from', 'firstName lastName')); }
-  catch(e) { res.status(500).json({ message: e.message }); }
-});
-app.post('/api/friends/accept', auth, async function(req, res) {
+
+app.get('/api/friends/requests', auth, async (req, res) => {
   try {
-    var r = await FriendReq.findById(req.body.requestId);
-    if (!r || r.to.toString() !== req.user._id.toString()) return res.status(403).json({ message: 'Introuvable' });
-    r.status = 'accepted'; await r.save();
-    await User.findByIdAndUpdate(req.user._id, { $addToSet: { friends: r.from } });
-    await User.findByIdAndUpdate(r.from, { $addToSet: { friends: req.user._id } });
-    res.json({ message: 'Ami ajoute' });
-  } catch(e) { res.status(500).json({ message: e.message }); }
+    const requests = await FriendReq.find({ to: req.user._id, status: 'pending' }).populate('from', 'firstName lastName');
+    res.json(requests);
+  } catch (e) { res.status(500).json({ message: e.message }); }
 });
-app.post('/api/friends/decline', auth, async function(req, res) {
+
+app.post('/api/friends/accept', auth, async (req, res) => {
   try {
-    var r = await FriendReq.findById(req.body.requestId);
-    if (!r || r.to.toString() !== req.user._id.toString()) return res.status(403).json({ message: 'Introuvable' });
-    r.status = 'declined'; await r.save(); res.json({ message: 'Demande refusee' });
-  } catch(e) { res.status(500).json({ message: e.message }); }
+    const request = await FriendReq.findById(req.body.requestId);
+    if (!request || request.to.toString() !== req.user._id.toString())
+      return res.status(403).json({ message: 'Demande introuvable' });
+    request.status = 'accepted'; await request.save();
+    await User.findByIdAndUpdate(req.user._id, { $addToSet: { friends: request.from } });
+    await User.findByIdAndUpdate(request.from,   { $addToSet: { friends: req.user._id } });
+    res.json({ message: 'Ami ajoute !' });
+  } catch (e) { res.status(500).json({ message: e.message }); }
 });
-app.get('/api/friends', auth, async function(req, res) {
+
+app.post('/api/friends/decline', auth, async (req, res) => {
   try {
-    var u = await User.findById(req.user._id).populate('friends', 'firstName lastName compareVisible');
-    var list = await Promise.all(u.friends.map(async function(f) {
-      var rs = await QuizResult.find({ userId: f._id });
-      var tp = rs.reduce(function(s, r) { return s + (r.points || 0); }, 0);
-      var bm = {}; rs.forEach(function(r) { bm[r.matiere] = (bm[r.matiere] || 0) + (r.points || 0); });
-      return { id: f._id, firstName: f.firstName, lastName: f.lastName, name: f.firstName + ' ' + f.lastName, totalPoints: tp, byMatiere: bm, compareVisible: f.compareVisible };
+    const request = await FriendReq.findById(req.body.requestId);
+    if (!request || request.to.toString() !== req.user._id.toString())
+      return res.status(403).json({ message: 'Demande introuvable' });
+    request.status = 'declined'; await request.save();
+    res.json({ message: 'Demande refusee' });
+  } catch (e) { res.status(500).json({ message: e.message }); }
+});
+
+app.get('/api/friends', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).populate('friends', 'firstName lastName compareVisible');
+    const list = await Promise.all(user.friends.map(async f => {
+      const results     = await QuizResult.find({ userId: f._id });
+      const totalPoints = results.reduce((s, r) => s + (r.points || 0), 0);
+      const byMatiere   = {};
+      results.forEach(r => { byMatiere[r.matiere] = (byMatiere[r.matiere] || 0) + (r.points || 0); });
+      return { id: f._id, firstName: f.firstName, lastName: f.lastName, name: `${f.firstName} ${f.lastName}`, totalPoints, byMatiere, compareVisible: f.compareVisible };
     }));
     res.json(list);
-  } catch(e) { res.status(500).json({ message: e.message }); }
+  } catch (e) { res.status(500).json({ message: e.message }); }
 });
-app.delete('/api/friends/:friendId', auth, async function(req, res) {
+
+app.delete('/api/friends/:friendId', auth, async (req, res) => {
   try {
-    await User.findByIdAndUpdate(req.user._id, { $pull: { friends: req.params.friendId } });
+    await User.findByIdAndUpdate(req.user._id,        { $pull: { friends: req.params.friendId } });
     await User.findByIdAndUpdate(req.params.friendId, { $pull: { friends: req.user._id } });
     res.json({ message: 'Ami supprime' });
-  } catch(e) { res.status(500).json({ message: e.message }); }
+  } catch (e) { res.status(500).json({ message: e.message }); }
 });
-app.patch('/api/friends/visibility', auth, async function(req, res) {
-  try { await User.findByIdAndUpdate(req.user._id, { compareVisible: req.body.visible }); res.json({ message: 'OK' }); }
-  catch(e) { res.status(500).json({ message: e.message }); }
+
+app.patch('/api/friends/visibility', auth, async (req, res) => {
+  try {
+    await User.findByIdAndUpdate(req.user._id, { compareVisible: req.body.visible });
+    res.json({ message: 'Visibilite mise a jour' });
+  } catch (e) { res.status(500).json({ message: e.message }); }
 });
-app.get('/api/health', function(req, res) { res.json({ status: 'ok', message: 'EDUMIND Groq Running' }); });
-app.listen(process.env.PORT || 5000, function() { console.log('EDUMIND running on port ' + (process.env.PORT || 5000)); });
+
+app.get('/api/health', (_, res) => res.json({ status: 'ok', message: 'EDUMIND IA Backend (Groq) Running 🧠' }));
+
+app.listen(process.env.PORT || 5000, () => {
+  console.log(`🚀 EDUMIND Backend running on port ${process.env.PORT || 5000}`);
+});
