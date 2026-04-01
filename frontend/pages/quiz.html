@@ -3,845 +3,375 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>EDUMIND IA — Quiz & Questions</title>
+  <title>EDUMIND IA — Quiz</title>
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
   <style>
-    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
-    :root {
-      --emerald:#00c9a7; --emerald-dark:#008f76;
-      --navy:#0a0e1a; --navy-light:#1a2340;
-      --gold:#f5c842; --white:#f0f4ff; --muted:#8896b3;
-      --card-bg:rgba(26,35,64,0.75);
-    }
-    body { font-family:'Syne','Tajawal',sans-serif; background:var(--navy); color:var(--white); min-height:100vh; overflow-x:hidden; }
-    .bg-canvas { position:fixed;inset:0;z-index:0;background:radial-gradient(ellipse 70% 60% at 30% 10%,rgba(0,201,167,0.13) 0%,transparent 65%),var(--navy); }
-    nav { position:sticky;top:0;z-index:100;padding:1rem 2rem;background:rgba(10,14,26,0.85);backdrop-filter:blur(20px);border-bottom:1px solid rgba(0,201,167,0.1);display:flex;align-items:center;justify-content:space-between; }
-    .logo { font-size:1.3rem;font-weight:800;color:var(--emerald);letter-spacing:2px;display:flex;align-items:center;gap:0.5rem;text-decoration:none; }
-    .logo-icon { width:32px;height:32px;background:linear-gradient(135deg,var(--emerald),var(--gold));border-radius:8px;display:flex;align-items:center;justify-content:center; }
-    .back-link { color:var(--muted);text-decoration:none;font-size:0.85rem;transition:color 0.2s; }
-    .back-link:hover { color:var(--emerald); }
-    main { position:relative;z-index:1;max-width:860px;margin:0 auto;padding:3rem 2rem 6rem; }
-    .page-header { text-align:center;margin-bottom:3rem; }
-    .page-title-ar { font-family:'Tajawal';direction:rtl;font-size:clamp(1.4rem,4vw,2.2rem);font-weight:900;color:var(--emerald);margin-bottom:0.3rem; }
-    .page-title-fr { font-size:clamp(1.8rem,5vw,3rem);font-weight:800;background:linear-gradient(135deg,#fff 40%,var(--emerald));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:0.4rem; }
-    .page-sub { color:var(--muted);font-size:0.9rem; }
-    .section { background:var(--card-bg);border:1px solid rgba(255,255,255,0.06);border-radius:20px;padding:1.8rem;margin-bottom:1.5rem;backdrop-filter:blur(10px);transition:border-color 0.3s; }
-    .section.active-section { border-color:rgba(0,201,167,0.3); }
-    .section-label { display:flex;align-items:center;gap:0.6rem;margin-bottom:1.2rem; }
-    .section-label .num { width:26px;height:26px;background:linear-gradient(135deg,var(--emerald),var(--emerald-dark));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:800;color:var(--navy);flex-shrink:0; }
-    .lbl-fr { font-weight:700;font-size:1rem; }
-    .lbl-ar { font-family:'Tajawal';font-size:0.88rem;color:var(--muted);direction:rtl;margin-left:auto; }
-    .pills { display:flex;flex-wrap:wrap;gap:0.6rem; }
-    .pill { padding:0.55rem 1.1rem;border-radius:100px;border:1.5px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.03);cursor:pointer;font-family:'Tajawal','Syne',sans-serif;font-size:0.88rem;transition:all 0.2s;user-select:none; }
-    .pill:hover { border-color:rgba(0,201,167,0.4);background:rgba(0,201,167,0.06);color:var(--emerald); }
-    .pill.selected { border-color:var(--emerald);background:rgba(0,201,167,0.12);color:var(--emerald);font-weight:700; }
-    .matiere-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:0.7rem; }
-    .mat-card { border-radius:14px;border:1.5px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);padding:0.9rem 1rem;cursor:pointer;transition:all 0.22s;display:flex;align-items:center;gap:0.6rem; }
-    .mat-card:hover { border-color:rgba(0,201,167,0.35);background:rgba(0,201,167,0.05); }
-    .mat-card.selected { border-color:var(--emerald);background:rgba(0,201,167,0.1); }
-    .mat-icon { font-size:1.4rem;flex-shrink:0; }
-    .mat-name-fr { font-size:0.8rem;font-weight:700; }
-    .mat-name-ar { font-family:'Tajawal';font-size:0.82rem;color:var(--muted);direction:rtl; }
-    .lecon-list { display:flex;flex-direction:column;gap:0.5rem;max-height:320px;overflow-y:auto;padding-right:0.3rem; }
-    .lecon-list::-webkit-scrollbar { width:4px; }
-    .lecon-list::-webkit-scrollbar-thumb { background:rgba(0,201,167,0.3);border-radius:4px; }
-    .lecon-item { border-radius:12px;border:1.5px solid rgba(255,255,255,0.07);background:rgba(255,255,255,0.02);padding:0.8rem 1rem;cursor:pointer;transition:all 0.2s;display:flex;justify-content:space-between;align-items:center;gap:0.5rem; }
-    .lecon-item:hover { border-color:rgba(0,201,167,0.3);background:rgba(0,201,167,0.05); }
-    .lecon-item.selected { border-color:var(--emerald);background:rgba(0,201,167,0.1); }
-    .lecon-ar { font-family:'Tajawal';font-size:0.9rem;font-weight:600;direction:rtl;flex:1;text-align:right; }
-    .lecon-num { font-size:0.72rem;color:var(--muted);flex-shrink:0;font-weight:700; }
-    .check { color:var(--emerald);opacity:0;transition:opacity 0.2s;flex-shrink:0; }
-    .lecon-item.selected .check { opacity:1; }
-    .diff-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:0.8rem; }
-    .diff-card { border-radius:14px;border:1.5px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);padding:1rem;text-align:center;cursor:pointer;transition:all 0.25s; }
-    .diff-card:hover { transform:translateY(-3px); }
-    .diff-icon { font-size:1.8rem;margin-bottom:0.4rem; }
-    .diff-fr { font-weight:700;font-size:0.9rem; }
-    .diff-ar { font-family:'Tajawal';font-size:0.85rem;color:var(--muted);direction:rtl; }
-    .diff-card[data-diff="facile"].selected { border-color:#4ade80;background:rgba(74,222,128,0.1); }
-    .diff-card[data-diff="normale"].selected { border-color:var(--gold);background:rgba(245,200,66,0.1); }
-    .diff-card[data-diff="difficile"].selected { border-color:#f87171;background:rgba(248,113,113,0.1); }
-    .hidden { display:none!important; }
-    .cta-wrap { text-align:center;margin-top:2.5rem; }
-    .btn-start { display:inline-flex;flex-direction:column;align-items:center;gap:0.2rem;padding:1rem 3rem;background:linear-gradient(135deg,var(--emerald),var(--emerald-dark));border:none;border-radius:16px;color:white;font-family:'Tajawal','Syne',sans-serif;font-size:1.1rem;font-weight:700;cursor:pointer;transition:all 0.3s;box-shadow:0 4px 25px rgba(0,201,167,0.3);opacity:0.35;pointer-events:none; }
-    .btn-start.ready { opacity:1;pointer-events:auto; }
-    .btn-start.ready:hover { transform:translateY(-3px);box-shadow:0 12px 40px rgba(0,201,167,0.45); }
-    .btn-start-ar { font-size:0.85rem;opacity:0.8; }
-    @media(max-width:600px) { .matiere-grid { grid-template-columns:repeat(2,1fr); } }
+    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+    :root{--emerald:#00c9a7;--emerald-dark:#008f76;--navy:#0a0e1a;--navy-light:#1a2340;--gold:#f5c842;--white:#f0f4ff;--muted:#8896b3;--purple:#a78bfa;--coral:#fb923c;--red:#f87171}
+    body{font-family:'Syne','Tajawal',sans-serif;background:var(--navy);color:var(--white);min-height:100vh}
+    .bg-canvas{position:fixed;inset:0;z-index:0;background:radial-gradient(ellipse 70% 50% at 50% 0%,rgba(0,201,167,.1) 0%,transparent 60%),var(--navy)}
+    nav{position:sticky;top:0;z-index:100;padding:1rem 2rem;background:rgba(10,14,26,.85);backdrop-filter:blur(20px);border-bottom:1px solid rgba(0,201,167,.1);display:flex;align-items:center;justify-content:space-between}
+    .logo{font-size:1.2rem;font-weight:800;color:var(--emerald);text-decoration:none;display:flex;align-items:center;gap:.4rem}
+    .back-btn{color:var(--muted);text-decoration:none;font-size:.85rem;transition:color .2s}.back-btn:hover{color:var(--emerald)}
+    main{position:relative;z-index:1;max-width:860px;margin:0 auto;padding:2rem 1.5rem 6rem}
+
+    /* INFO BAR */
+    .info-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;padding:.8rem 1.2rem;background:rgba(26,35,64,.6);border:1px solid rgba(255,255,255,.06);border-radius:14px}
+    .info-tag{font-size:.75rem;color:var(--muted);font-family:'Tajawal'}
+    .info-score{font-size:1rem;font-weight:800;color:var(--gold)}
+    .progress-bar{height:6px;background:rgba(255,255,255,.07);border-radius:3px;margin-bottom:1.5rem;overflow:hidden}
+    .progress-fill{height:100%;background:linear-gradient(90deg,var(--emerald),var(--gold));border-radius:3px;transition:width .5s ease}
+
+    /* LOADING */
+    .loading{text-align:center;padding:4rem 2rem}
+    .spinner{width:50px;height:50px;border:3px solid rgba(0,201,167,.2);border-top-color:var(--emerald);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 1.5rem}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .loading-text{color:var(--emerald);font-weight:700;font-size:1.1rem;margin-bottom:.3rem}
+    .loading-ar{font-family:'Tajawal';color:var(--muted);font-size:.95rem}
+
+    /* QUESTION CARD */
+    .question-card{background:rgba(26,35,64,.75);border:1px solid rgba(255,255,255,.07);border-radius:20px;padding:2rem;margin-bottom:1.2rem;backdrop-filter:blur(10px)}
+    .q-num{font-size:.7rem;letter-spacing:2px;color:var(--emerald);font-weight:700;margin-bottom:.8rem}
+    .q-text{font-size:1.05rem;font-weight:600;line-height:1.7;margin-bottom:1.5rem;font-family:'Tajawal';direction:rtl}
+    .q-text.fr{font-family:'Syne';direction:ltr}
+    .answers-grid{display:flex;flex-direction:column;gap:.7rem}
+    .ans-btn{padding:1rem 1.2rem;background:rgba(255,255,255,.04);border:1.5px solid rgba(255,255,255,.08);border-radius:12px;text-align:right;color:var(--white);cursor:pointer;font-family:'Tajawal';font-size:.95rem;transition:all .25s;display:flex;align-items:center;gap:.8rem;direction:rtl}
+    .ans-btn.fr{text-align:left;direction:ltr;font-family:'Syne';font-size:.9rem}
+    .ans-btn:hover:not(:disabled){border-color:rgba(0,201,167,.4);background:rgba(0,201,167,.06)}
+    .ans-btn.correct{border-color:#4ade80;background:rgba(74,222,128,.12);color:#4ade80}
+    .ans-btn.wrong{border-color:var(--red);background:rgba(248,113,113,.1);color:var(--red)}
+    .ans-letter{width:30px;height:30px;border-radius:8px;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:800;flex-shrink:0}
+
+    /* EXPLICATION */
+    .expl-box{display:none;margin-top:1.2rem;background:rgba(0,201,167,.06);border:1px solid rgba(0,201,167,.2);border-radius:12px;padding:1.2rem}
+    .expl-box.show{display:block}
+    .expl-title{font-size:.7rem;letter-spacing:2px;color:var(--emerald);font-weight:700;margin-bottom:.5rem}
+    .expl-text{font-size:.9rem;color:var(--muted);line-height:1.7;font-family:'Tajawal';direction:rtl}
+    .expl-text.fr{font-family:'Syne';direction:ltr}
+
+    /* NEXT BTN */
+    .btn-next{width:100%;padding:.9rem;background:rgba(0,201,167,.1);border:1px solid rgba(0,201,167,.3);border-radius:12px;color:var(--emerald);cursor:pointer;font-family:'Syne';font-size:.95rem;font-weight:700;transition:all .25s;display:none;margin-top:1rem}
+    .btn-next:hover{background:rgba(0,201,167,.2)}
+    .btn-next.show{display:block}
+
+    /* EXERCICE INTERACTIF */
+    .ex-card{background:rgba(26,35,64,.75);border:1px solid rgba(255,255,255,.07);border-radius:20px;padding:2rem;margin-bottom:1.2rem;backdrop-filter:blur(10px)}
+    .ex-titre{font-size:1rem;font-weight:700;color:var(--gold);margin-bottom:.8rem}
+    .ex-enonce{font-size:.95rem;line-height:1.7;margin-bottom:1rem;font-family:'Tajawal';direction:rtl}
+    .ex-donnees{background:rgba(0,201,167,.06);border:1px solid rgba(0,201,167,.2);border-radius:10px;padding:.8rem 1rem;margin-bottom:1rem;font-size:.85rem;color:var(--emerald);font-family:'Tajawal';direction:rtl}
+    .ex-questions{margin-bottom:1.2rem}
+    .ex-q{padding:.5rem 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:.9rem;font-family:'Tajawal';direction:rtl}
+    .student-area label{font-size:.75rem;letter-spacing:2px;color:var(--purple);font-weight:700;display:block;margin-bottom:.6rem}
+    .student-area textarea{width:100%;min-height:120px;background:rgba(255,255,255,.04);border:1.5px solid rgba(167,139,250,.3);border-radius:12px;padding:.9rem;color:var(--white);font-family:'Tajawal';font-size:.9rem;resize:vertical;outline:none;line-height:1.6;direction:rtl}
+    .student-area textarea:focus{border-color:var(--purple)}
+    .btn-submit-answer{width:100%;padding:.9rem;background:linear-gradient(135deg,var(--purple),#7c5fe6);border:none;border-radius:12px;color:white;font-family:'Tajawal';font-size:1rem;font-weight:700;cursor:pointer;transition:all .3s;margin-top:.8rem}
+    .btn-submit-answer:disabled{opacity:.5;cursor:not-allowed}
+    .eval-result{margin-top:1.2rem;display:none}
+    .eval-result.show{display:block}
+    .btn-next-ex{width:100%;padding:.9rem;background:rgba(0,201,167,.1);border:1px solid rgba(0,201,167,.3);border-radius:12px;color:var(--emerald);cursor:pointer;font-family:'Tajawal';font-size:1rem;font-weight:700;transition:all .25s;margin-top:.8rem}
+    .btn-next-ex:hover{background:rgba(0,201,167,.2)}
+
+    /* RESULTS */
+    .results-card{background:rgba(26,35,64,.85);border:1px solid rgba(0,201,167,.2);border-radius:24px;padding:2.5rem;text-align:center;display:none}
+    .results-card.show{display:block}
+    .res-emoji{font-size:4rem;margin-bottom:1rem}
+    .res-score{font-size:3rem;font-weight:800;color:var(--emerald)}
+    .res-msg{font-size:1rem;color:var(--white);margin:.5rem 0;font-weight:600}
+    .res-ar{font-family:'Tajawal';direction:rtl;font-size:1rem;color:var(--muted)}
+    .btn-retry{padding:.8rem 2rem;background:linear-gradient(135deg,var(--emerald),var(--emerald-dark));border:none;border-radius:12px;color:white;cursor:pointer;font-family:'Syne';font-size:.95rem;font-weight:700;margin:.4rem;text-decoration:none;display:inline-block}
+    .btn-home{padding:.8rem 2rem;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:12px;color:var(--muted);cursor:pointer;font-family:'Syne';font-size:.95rem;text-decoration:none;display:inline-block;margin:.4rem}
+
+    /* ERROR TOAST */
+    .toast{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%) translateY(100px);background:rgba(248,113,113,.15);border:1px solid rgba(248,113,113,.4);border-radius:14px;padding:1rem 1.5rem;color:var(--red);font-size:.9rem;z-index:999;max-width:90%;text-align:center;backdrop-filter:blur(12px);transition:transform .3s}
+    .toast.show{transform:translateX(-50%) translateY(0)}
   </style>
 </head>
 <body>
 <div class="bg-canvas"></div>
 <nav>
-  <a href="dashboard.html" class="logo"><div class="logo-icon">🧠</div>EDUMIND<span style="color:var(--gold)">.</span>IA</a>
-  <a href="dashboard.html" class="back-link">← Tableau de bord</a>
+  <a href="dashboard.html" class="logo">🧠 EDUMIND<span style="color:var(--gold)">.</span>IA</a>
+  <a href="quiz.html" class="back-btn">← Retour au choix</a>
 </nav>
+
 <main>
-  <div class="page-header">
-    <div class="page-title-ar">اختبارات وأسئلة</div>
-    <div class="page-title-fr">Quiz & Questions</div>
-    <div class="page-sub">هل أنت مستعد؟ · Es-tu prêt ?</div>
+  <div class="info-bar">
+    <div class="info-tag" id="infoTag">Chargement...</div>
+    <div class="info-score" id="infoScore">0 pts</div>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+
+  <!-- LOADING -->
+  <div class="loading" id="loadingDiv">
+    <div class="spinner"></div>
+    <div class="loading-text">Génération par l'IA en cours...</div>
+    <div class="loading-ar">جارٍ إنشاء الأسئلة بالذكاء الاصطناعي...</div>
   </div>
 
-  <!-- ETAPE 1 : ANNEE -->
-  <div class="section active-section" id="sec-annee">
-    <div class="section-label">
-      <div class="num">1</div>
-      <div class="lbl-fr">Année scolaire</div>
-      <div class="lbl-ar">السنة الدراسية</div>
-    </div>
-    <div class="pills" id="pills-annee">
-      <div class="pill" data-annee="1am">1ère AM · 1 متوسط</div>
-      <div class="pill" data-annee="2am">2ème AM · 2 متوسط</div>
-      <div class="pill" data-annee="3am">3ème AM · 3 متوسط</div>
-      <div class="pill" data-annee="4am">4ème AM · 4 متوسط</div>
-      <div class="pill" data-annee="brevet">BEM · البيام</div>
-      <div class="pill" data-annee="1as" data-lycee="1">1ère AS · 1 ثانوي</div>
-      <div class="pill" data-annee="2as" data-lycee="1">2ème AS · 2 ثانوي</div>
-      <div class="pill" data-annee="3as" data-lycee="1">3ème AS · 3 ثانوي</div>
-      <div class="pill" data-annee="bac" data-lycee="1">BAC · البكالوريا</div>
-    </div>
+  <!-- QUIZ QCM -->
+  <div id="quizContainer" style="display:none">
+    <div id="questionContainer"></div>
+    <button class="btn-next" id="btnNext" onclick="nextQuestion()">السؤال التالي · Question suivante →</button>
   </div>
 
-  <!-- ETAPE 2 : FILIERE (lycée) -->
-  <div class="section hidden" id="sec-filiere">
-    <div class="section-label">
-      <div class="num">2</div>
-      <div class="lbl-fr">Filière</div>
-      <div class="lbl-ar">الشعبة</div>
-    </div>
-    <div class="pills" id="pills-filiere"></div>
-  </div>
+  <!-- EXERCICES MATH -->
+  <div id="exerciceContainer" style="display:none"></div>
 
-  <!-- ETAPE 3 : MATIERE -->
-  <div class="section hidden" id="sec-matiere">
-    <div class="section-label">
-      <div class="num" id="num-mat">2</div>
-      <div class="lbl-fr">Matière</div>
-      <div class="lbl-ar">المادة</div>
+  <!-- RESULTS -->
+  <div class="results-card" id="resultsCard">
+    <div class="res-emoji" id="resEmoji">🏆</div>
+    <div class="res-score" id="resScore">0/0</div>
+    <div class="res-msg" id="resMsg"></div>
+    <div class="res-ar" id="resAr"></div>
+    <div style="margin-top:1.5rem">
+      <a href="quiz.html" class="btn-retry">🔄 Refaire un quiz</a>
+      <a href="dashboard.html" class="btn-home">🏠 Accueil</a>
     </div>
-    <div class="matiere-grid" id="grid-matiere"></div>
-  </div>
-
-  <!-- ETAPE 4 : LECON -->
-  <div class="section hidden" id="sec-lecon">
-    <div class="section-label">
-      <div class="num" id="num-lecon">3</div>
-      <div class="lbl-fr">Leçon</div>
-      <div class="lbl-ar">الدرس</div>
-    </div>
-    <div class="lecon-list" id="list-lecon"></div>
-  </div>
-
-  <!-- ETAPE 5 : DIFFICULTE -->
-  <div class="section hidden" id="sec-diff">
-    <div class="section-label">
-      <div class="num" id="num-diff">4</div>
-      <div class="lbl-fr">Difficulté</div>
-      <div class="lbl-ar">مستوى الصعوبة</div>
-    </div>
-    <div class="diff-grid">
-      <div class="diff-card" data-diff="facile"><div class="diff-icon">🟢</div><div class="diff-fr">Facile</div><div class="diff-ar">سهل</div></div>
-      <div class="diff-card" data-diff="normale"><div class="diff-icon">🟡</div><div class="diff-fr">Normale</div><div class="diff-ar">متوسط</div></div>
-      <div class="diff-card" data-diff="difficile"><div class="diff-icon">🔴</div><div class="diff-fr">Difficile</div><div class="diff-ar">صعب</div></div>
-    </div>
-  </div>
-
-  <div class="cta-wrap">
-    <button class="btn-start" id="btn-start" onclick="startQuiz()">
-      <span>Commencer le Quiz</span>
-      <span class="btn-start-ar">ابدأ الاختبار</span>
-    </button>
   </div>
 </main>
 
+<div class="toast" id="toast"></div>
+
 <script>
-// ═══════════════════════════════════════
-// FILIERES
-// ═══════════════════════════════════════
-var FILIERES = {
-  '1as': [
-    { id:'scientifique', fr:'Scientifique', ar:'علوم وتكنولوجيا' },
-    { id:'lettres',      fr:'Lettres & Sc. Humaines', ar:'آداب وعلوم إنسانية' }
-  ],
-  '2as': [
-    { id:'math',         fr:'Mathématiques', ar:'رياضيات' },
-    { id:'technique',    fr:'Technique Math.', ar:'تقني رياضي' },
-    { id:'scientifique', fr:'Sciences de la Nature', ar:'علوم الطبيعة والحياة' },
-    { id:'gestion',      fr:'Gestion & Économie', ar:'تسيير واقتصاد' },
-    { id:'langue',       fr:'Langues Étrangères', ar:'لغات أجنبية' },
-    { id:'philo',        fr:'Philosophie', ar:'فلسفة' }
-  ]
-};
-FILIERES['3as'] = FILIERES['2as'];
-FILIERES['bac'] = FILIERES['2as'];
+const API   = 'https://edumind-api.onrender.com';
+const token = localStorage.getItem('token');
 
-// ═══════════════════════════════════════
-// MATIERES par année (collège)
-// ═══════════════════════════════════════
-var MATIERES_MOYEN = {
-  '1am': [
-    { id:'Arabe',              fr:'Arabe',        ar:'اللغة العربية',        icon:'📖' },
-    { id:'Francais',           fr:'Français',     ar:'اللغة الفرنسية',       icon:'🇫🇷' },
-    { id:'Mathematiques',      fr:'Maths',        ar:'الرياضيات',            icon:'📐' },
-    { id:'Histoire-Geographie',fr:'Histoire-Géo', ar:'التاريخ والجغرافيا',   icon:'🌍' },
-    { id:'Education Islamique',fr:'Éd. Islamique',ar:'التربية الإسلامية',    icon:'☪️' },
-    { id:'Education Civique',  fr:'Éd. Civique',  ar:'التربية المدنية',      icon:'🏛️' },
-    { id:'Sciences Naturelles',fr:'Sciences',     ar:'العلوم الطبيعية',      icon:'🌿' }
-  ],
-  '2am': [
-    { id:'Arabe',              fr:'Arabe',        ar:'اللغة العربية',        icon:'📖' },
-    { id:'Francais',           fr:'Français',     ar:'اللغة الفرنسية',       icon:'🇫🇷' },
-    { id:'Mathematiques',      fr:'Maths',        ar:'الرياضيات',            icon:'📐' },
-    { id:'Histoire-Geographie',fr:'Histoire-Géo', ar:'التاريخ والجغرافيا',   icon:'🌍' },
-    { id:'Education Islamique',fr:'Éd. Islamique',ar:'التربية الإسلامية',    icon:'☪️' },
-    { id:'Education Civique',  fr:'Éd. Civique',  ar:'التربية المدنية',      icon:'🏛️' },
-    { id:'Sciences Naturelles',fr:'Sciences',     ar:'العلوم الطبيعية',      icon:'🌿' },
-    { id:'Physique-Chimie',    fr:'Physique',     ar:'الفيزياء والكيمياء',   icon:'⚗️' }
-  ],
-  '3am': [
-    { id:'Arabe',              fr:'Arabe',        ar:'اللغة العربية',        icon:'📖' },
-    { id:'Francais',           fr:'Français',     ar:'اللغة الفرنسية',       icon:'🇫🇷' },
-    { id:'Anglais',            fr:'Anglais',      ar:'اللغة الإنجليزية',     icon:'🇬🇧' },
-    { id:'Mathematiques',      fr:'Maths',        ar:'الرياضيات',            icon:'📐' },
-    { id:'Histoire-Geographie',fr:'Histoire-Géo', ar:'التاريخ والجغرافيا',   icon:'🌍' },
-    { id:'Education Islamique',fr:'Éd. Islamique',ar:'التربية الإسلامية',    icon:'☪️' },
-    { id:'Education Civique',  fr:'Éd. Civique',  ar:'التربية المدنية',      icon:'🏛️' },
-    { id:'Sciences Naturelles',fr:'Sciences',     ar:'العلوم الطبيعية',      icon:'🌿' },
-    { id:'Physique-Chimie',    fr:'Physique',     ar:'الفيزياء والكيمياء',   icon:'⚗️' }
-  ]
-};
-MATIERES_MOYEN['4am']   = MATIERES_MOYEN['3am'];
-MATIERES_MOYEN['brevet']= MATIERES_MOYEN['3am'];
+// Lire les paramètres URL
+const params    = new URLSearchParams(location.search);
+const annee     = params.get('annee')     || '';
+const filiere   = params.get('filiere')   || '';
+const matiere   = params.get('matiere')   || '';
+const lecon     = params.get('lecon')     || '';
+const difficulte= params.get('difficulte')|| 'normale';
 
-// ═══════════════════════════════════════
-// MATIERES par filière lycée
-// ═══════════════════════════════════════
-var MATIERES_LYCEE = {
-  '1as': {
-    'scientifique': [
-      { id:'Arabe',              fr:'Arabe',       ar:'اللغة العربية',       icon:'📖' },
-      { id:'Francais',           fr:'Français',    ar:'اللغة الفرنسية',      icon:'🇫🇷' },
-      { id:'Anglais',            fr:'Anglais',     ar:'اللغة الإنجليزية',    icon:'🇬🇧' },
-      { id:'Mathematiques',      fr:'Maths',       ar:'الرياضيات',           icon:'📐' },
-      { id:'Physique-Chimie',    fr:'Physique',    ar:'الفيزياء والكيمياء',  icon:'⚗️' },
-      { id:'Sciences Naturelles',fr:'Sciences',    ar:'علوم الطبيعة',        icon:'🌿' },
-      { id:'Histoire-Geographie',fr:'Histoire-Géo',ar:'التاريخ والجغرافيا',  icon:'🌍' },
-      { id:'Education Islamique',fr:'Éd. Islamique',ar:'التربية الإسلامية',  icon:'☪️' },
-      { id:'Philosophie',        fr:'Philosophie', ar:'الفلسفة',             icon:'💭' }
-    ],
-    'lettres': [
-      { id:'Arabe',              fr:'Arabe',       ar:'اللغة العربية',       icon:'📖' },
-      { id:'Francais',           fr:'Français',    ar:'اللغة الفرنسية',      icon:'🇫🇷' },
-      { id:'Anglais',            fr:'Anglais',     ar:'اللغة الإنجليزية',    icon:'🇬🇧' },
-      { id:'Histoire-Geographie',fr:'Histoire-Géo',ar:'التاريخ والجغرافيا',  icon:'🌍' },
-      { id:'Education Islamique',fr:'Éd. Islamique',ar:'التربية الإسلامية',  icon:'☪️' },
-      { id:'Philosophie',        fr:'Philosophie', ar:'الفلسفة',             icon:'💭' },
-      { id:'Mathematiques',      fr:'Maths',       ar:'الرياضيات',           icon:'📐' }
-    ]
-  },
-  '2as': {
-    'math': [
-      { id:'Arabe',              fr:'Arabe',       ar:'اللغة العربية',       icon:'📖' },
-      { id:'Francais',           fr:'Français',    ar:'اللغة الفرنسية',      icon:'🇫🇷' },
-      { id:'Anglais',            fr:'Anglais',     ar:'اللغة الإنجليزية',    icon:'🇬🇧' },
-      { id:'Mathematiques',      fr:'Maths',       ar:'الرياضيات',           icon:'📐' },
-      { id:'Physique-Chimie',    fr:'Physique',    ar:'الفيزياء والكيمياء',  icon:'⚗️' },
-      { id:'Education Islamique',fr:'Éd. Islamique',ar:'التربية الإسلامية',  icon:'☪️' },
-      { id:'Histoire-Geographie',fr:'Histoire-Géo',ar:'التاريخ والجغرافيا',  icon:'🌍' }
-    ],
-    'technique': [
-      { id:'Arabe',              fr:'Arabe',       ar:'اللغة العربية',       icon:'📖' },
-      { id:'Francais',           fr:'Français',    ar:'اللغة الفرنسية',      icon:'🇫🇷' },
-      { id:'Anglais',            fr:'Anglais',     ar:'اللغة الإنجليزية',    icon:'🇬🇧' },
-      { id:'Mathematiques',      fr:'Maths',       ar:'الرياضيات',           icon:'📐' },
-      { id:'Physique-Chimie',    fr:'Physique',    ar:'الفيزياء والكيمياء',  icon:'⚗️' },
-      { id:'Sciences Techniques',fr:'Sc. Tech.',   ar:'العلوم التقنية',      icon:'⚙️' },
-      { id:'Education Islamique',fr:'Éd. Islamique',ar:'التربية الإسلامية',  icon:'☪️' }
-    ],
-    'scientifique': [
-      { id:'Arabe',              fr:'Arabe',       ar:'اللغة العربية',       icon:'📖' },
-      { id:'Francais',           fr:'Français',    ar:'اللغة الفرنسية',      icon:'🇫🇷' },
-      { id:'Anglais',            fr:'Anglais',     ar:'اللغة الإنجليزية',    icon:'🇬🇧' },
-      { id:'Mathematiques',      fr:'Maths',       ar:'الرياضيات',           icon:'📐' },
-      { id:'Physique-Chimie',    fr:'Physique',    ar:'الفيزياء والكيمياء',  icon:'⚗️' },
-      { id:'Sciences Naturelles',fr:'Sciences',    ar:'علوم الطبيعة',        icon:'🌿' },
-      { id:'Education Islamique',fr:'Éd. Islamique',ar:'التربية الإسلامية',  icon:'☪️' }
-    ],
-    'gestion': [
-      { id:'Arabe',              fr:'Arabe',       ar:'اللغة العربية',       icon:'📖' },
-      { id:'Francais',           fr:'Français',    ar:'اللغة الفرنسية',      icon:'🇫🇷' },
-      { id:'Anglais',            fr:'Anglais',     ar:'اللغة الإنجليزية',    icon:'🇬🇧' },
-      { id:'Economie',           fr:'Économie',    ar:'الاقتصاد والتسيير',   icon:'📊' },
-      { id:'Droit',              fr:'Droit',       ar:'القانون',             icon:'⚖️' },
-      { id:'Mathematiques',      fr:'Maths',       ar:'الرياضيات',           icon:'📐' },
-      { id:'Education Islamique',fr:'Éd. Islamique',ar:'التربية الإسلامية',  icon:'☪️' }
-    ],
-    'langue': [
-      { id:'Arabe',              fr:'Arabe',       ar:'اللغة العربية',       icon:'📖' },
-      { id:'Francais',           fr:'Français',    ar:'اللغة الفرنسية',      icon:'🇫🇷' },
-      { id:'Anglais',            fr:'Anglais',     ar:'اللغة الإنجليزية',    icon:'🇬🇧' },
-      { id:'Espagnol',           fr:'Espagnol',    ar:'اللغة الإسبانية',     icon:'🇪🇸' },
-      { id:'Allemand',           fr:'Allemand',    ar:'اللغة الألمانية',     icon:'🇩🇪' },
-      { id:'Histoire-Geographie',fr:'Histoire-Géo',ar:'التاريخ والجغرافيا',  icon:'🌍' },
-      { id:'Education Islamique',fr:'Éd. Islamique',ar:'التربية الإسلامية',  icon:'☪️' }
-    ],
-    'philo': [
-      { id:'Arabe',              fr:'Arabe',       ar:'اللغة العربية',       icon:'📖' },
-      { id:'Francais',           fr:'Français',    ar:'اللغة الفرنسية',      icon:'🇫🇷' },
-      { id:'Anglais',            fr:'Anglais',     ar:'اللغة الإنجليزية',    icon:'🇬🇧' },
-      { id:'Philosophie',        fr:'Philosophie', ar:'الفلسفة',             icon:'💭' },
-      { id:'Histoire-Geographie',fr:'Histoire-Géo',ar:'التاريخ والجغرافيا',  icon:'🌍' },
-      { id:'Education Islamique',fr:'Éd. Islamique',ar:'التربية الإسلامية',  icon:'☪️' }
-    ]
-  }
-};
-MATIERES_LYCEE['3as'] = MATIERES_LYCEE['2as'];
-MATIERES_LYCEE['bac'] = MATIERES_LYCEE['2as'];
+// Langues dont les questions restent dans leur langue
+const LANG_SUBJECTS = ['Francais','Anglais','Espagnol','Allemand'];
+const isFrench  = matiere === 'Francais';
+const isLang    = LANG_SUBJECTS.includes(matiere);
 
-// ═══════════════════════════════════════
-// LEÇONS — Programme algérien complet
-// ═══════════════════════════════════════
-var LECONS = {
+// Afficher infos
+document.getElementById('infoTag').textContent =
+  `${annee}${filiere?' · '+filiere:''} · ${matiere} · ${lecon.substring(0,30)}${lecon.length>30?'...':''}`;
 
-  // ─── 1AM ───
-  '1am_Arabe': [
-    'التعريف بالنفس والآخرين', 'وصف الأشخاص والأماكن', 'الأسرة والمجتمع',
-    'الحياة اليومية والنشاطات', 'الطبيعة والبيئة', 'القيم والانتماء الوطني',
-    'الصحة والغذاء', 'الأعياد والمناسبات', 'النص الوصفي', 'النص السردي'
-  ],
-  '1am_Francais': [
-    'Se présenter', 'Décrire des personnes et des lieux', 'La famille',
-    'Les activités quotidiennes', 'La nature et les saisons', 'Les fêtes et les traditions',
-    'Le texte narratif', 'Le texte descriptif', 'Les types de phrases', 'Le vocabulaire de base'
-  ],
-  '1am_Mathematiques': [
-    'الأعداد الطبيعية — القراءة والكتابة', 'العمليات على الأعداد الطبيعية',
-    'الأعداد العشرية', 'القسمة والمضاعفات والقواسم', 'الأشكال الهندسية الأساسية',
-    'المحيط والمساحة', 'الزوايا', 'الأعداد الكسرية — تعريف ومقارنة',
-    'الأعداد الكسرية — العمليات', 'قراءة البيانات والرسوم البيانية'
-  ],
-  '1am_Histoire-Geographie': [
-    'عصر ما قبل التاريخ في الجزائر', 'الحضارات القديمة — بلاد الرافدين ومصر',
-    'الحضارة الإغريقية', 'الحضارة الرومانية وشمال أفريقيا',
-    'الموقع الجغرافي للجزائر', 'التضاريس والمناخ في الجزائر',
-    'الموارد الطبيعية في الجزائر', 'سكان الجزائر وتوزيعهم',
-    'المدن الكبرى في الجزائر', 'جغرافيا البلدان المجاورة'
-  ],
-  '1am_Education Islamique': [
-    'أركان الإسلام الخمسة', 'أركان الإيمان الستة', 'صفات الله الحسنى',
-    'الطهارة وأحكامها', 'الصلاة — شروطها وأركانها', 'السيرة النبوية — مولد النبي ونشأته',
-    'السيرة النبوية — البعثة والدعوة', 'القيم الإسلامية — الصدق والأمانة',
-    'القيم الإسلامية — التسامح والإخاء', 'قصص الأنبياء'
-  ],
-  '1am_Education Civique': [
-    'الجزائر — الهوية الوطنية', 'مؤسسات الدولة الجزائرية', 'حقوق الطفل وواجباته',
-    'المواطنة والانتماء', 'المجتمع المدني والتضامن', 'البيئة والتنمية المستدامة',
-    'قواعد المرور والسلامة', 'التربية الصحية', 'حقوق الإنسان', 'الديمقراطية والحرية'
-  ],
-  '1am_Sciences Naturelles': [
-    'الخلية — وحدة بناء الكائنات الحية', 'تصنيف الكائنات الحية',
-    'التغذية عند النباتات الخضراء — البناء الضوئي', 'التغذية عند الحيوانات',
-    'التكاثر عند الكائنات الحية', 'البيئة والتوازن البيئي',
-    'الهضم عند الإنسان', 'التنفس عند الإنسان', 'دوران الدم', 'النظافة والوقاية'
-  ],
+// State quiz QCM
+let questions   = [];
+let current     = 0;
+let score       = 0;
 
-  // ─── 2AM ───
-  '2am_Arabe': [
-    'الأسرة والمجتمع — النص الحواري', 'التعبير عن المشاعر والآراء',
-    'وصف الظواهر الطبيعية', 'الأحداث التاريخية — السرد',
-    'النص الإخباري والتقرير', 'نصوص أدبية جزائرية', 'الصحافة المدرسية',
-    'التعبير الكتابي — رسالة شخصية', 'المفعول به والمفعول المطلق', 'النعت والحال'
-  ],
-  '2am_Francais': [
-    'Raconter une histoire (passé composé, imparfait)', 'Décrire un lieu ou un événement',
-    'Exprimer ses goûts et préférences', 'Le texte informatif',
-    'La lettre amicale', 'Les connecteurs logiques', 'L\'accord du participe passé',
-    'Le discours direct et indirect', 'La ponctuation et les registres de langue', 'Rédiger un résumé'
-  ],
-  '2am_Mathematiques': [
-    'الأعداد الصحيحة النسبية', 'الأعداد العشرية النسبية',
-    'الأعداد الكسرية — العمليات المتقدمة', 'البوليغون والمضلعات',
-    'محور الأعداد والمستوى الإحداثي', 'التقاسم والنسبة والتناسب',
-    'النسبة المئوية', 'التحويلات الهندسية — التماثل المحوري',
-    'مساحة الأشكال الهندسية', 'الإحصاء وقراءة البيانات'
-  ],
-  '2am_Physique-Chimie': [
-    'المادة وخصائصها — الحالات الثلاث', 'التحولات الفيزيائية للمادة',
-    'الذرة والجزيء', 'المزائج والمحاليل', 'الضوء وانتشاره',
-    'انعكاس الضوء والمرايا', 'الكهرباء — الدارة الكهربائية البسيطة',
-    'قياس الشدة والتوتر', 'الخواص الكيميائية للمادة', 'التفاعلات الكيميائية البسيطة'
-  ],
-  '2am_Histoire-Geographie': [
-    'ظهور الإسلام وانتشاره', 'الدولة الأموية والعباسية',
-    'الحضارة الإسلامية في المغرب العربي', 'المملكة الزيانية والحفصية',
-    'العثمانيون في الجزائر', 'الجزائر قبيل الاحتلال الفرنسي',
-    'تضاريس أفريقيا', 'سكان أفريقيا وثرواتها',
-    'التنوع المناخي في العالم', 'الموارد الطبيعية في العالم'
-  ],
-  '2am_Education Islamique': [
-    'الزكاة وأهميتها الاجتماعية', 'الصيام وفضائله', 'الحج وأركانه',
-    'السيرة النبوية — الهجرة', 'السيرة النبوية — فتح مكة',
-    'الأخلاق الإسلامية — التواضع', 'الأخلاق الإسلامية — الوفاء',
-    'الأسرة في الإسلام', 'حقوق الجوار والصداقة', 'قيم التعايش والسلم'
-  ],
-  '2am_Sciences Naturelles': [
-    'الإنتاج عند النباتات — الازهار والتلقيح', 'التكاثر الجنسي عند النباتات',
-    'التكاثر اللاجنسي عند النباتات', 'الإنتاج عند الحيوانات',
-    'سلاسل الغذاء والشبكات الغذائية', 'دور الكائنات الدقيقة في البيئة',
-    'جهاز المناعة — الدفاع عن الجسم', 'التلقيح والمصل',
-    'التدخين والكحول وأضرارهما', 'حفظ البيئة والتنوع البيولوجي'
-  ],
+// State exercices
+let exercices   = [];
+let exCurrent   = 0;
+let exTotal     = 0;
+let exEarned    = 0;
 
-  // ─── 3AM ───
-  '3am_Arabe': [
-    'الأدب الجزائري — نصوص مختارة', 'النص الحجاجي والإقناع',
-    'التعبير عن الرأي والموقف', 'نصوص المقاومة الوطنية',
-    'التحليل الأدبي للنص', 'الجملة الفعلية — أنواع الفعل',
-    'الجملة الاسمية — المبتدأ والخبر', 'الضمائر وأنواعها',
-    'التعبير الكتابي — الإنشاء الموجه', 'البلاغة — التشبيه والاستعارة'
-  ],
-  '3am_Anglais': [
-    'Simple Present — Daily routines', 'Present Continuous — Actions now',
-    'Simple Past — Talking about the past', 'Future tenses (will / going to)',
-    'Describing people and places', 'Expressing likes and dislikes',
-    'Asking for and giving information', 'Reading comprehension strategies',
-    'Writing a paragraph', 'Algerian culture and traditions in English'
-  ],
-  '3am_Mathematiques': [
-    'الأعداد الجذرية — تعريف وخصائص', 'الهوية الجبرية الشهيرة',
-    'حل المعادلات من الدرجة الأولى', 'حل المعادلات من الدرجة الثانية',
-    'التقاسم والعوامل', 'المتتاليات الحسابية والهندسية',
-    'الإحصاء — المتوسط والوسيط', 'الاحتمالات — تعريف وحساب',
-    'الهندسة في الفضاء', 'الدالة الخطية والتمثيل البياني'
-  ],
-  '3am_Physique-Chimie': [
-    'خصائص الضوء — الانكسار', 'العدسات وتكوين الصور',
-    'قوانين كيرشوف — الدوائر المتفرعة', 'قانون أوم والمقاومة الكهربائية',
-    'التفاعلات الكيميائية — معادلة التفاعل', 'الأحماض والقواعد — الـ pH',
-    'العناصر الكيميائية والجدول الدوري', 'الطاقة وتحولاتها',
-    'الطاقة الميكانيكية', 'الكتلة والوزن والجاذبية'
-  ],
-  '3am_Sciences Naturelles': [
-    'الانقسام الخلوي — الميتوز', 'الكروموسومات والمورثات',
-    'قوانين ماندل في الوراثة', 'الطفرات الجينية', 'الجهاز العصبي ودوره',
-    'الغدد الصماء والهرمونات', 'التكاثر الجنسي عند الإنسان',
-    'الأمراض المنقولة جنسياً والوقاية', 'التوازن البيئي والتلوث',
-    'الموارد الطبيعية والتنمية المستدامة'
-  ],
-  '3am_Histoire-Geographie': [
-    'مقدمات الثورة الجزائرية 1954', 'أول نوفمبر 1954 — انطلاق الثورة',
-    'مراحل الثورة التحريرية', 'مؤتمر الصومام 1956',
-    'دور المرأة في الثورة التحريرية', 'الثورة على الصعيد الدولي',
-    'اتفاقيات إيفيان واستقلال الجزائر 1962',
-    'بناء الجزائر المستقلة', 'التنمية الاقتصادية في الجزائر',
-    'قارات العالم — التضاريس والمناخ'
-  ],
-
-  // ─── 4AM ───
-  '4am_Arabe': [
-    'الشعر الجزائري الحديث — قراءة وتحليل', 'الشعر العربي الحديث — الاتجاهات',
-    'النثر الفني — المقالة', 'القصة القصيرة الجزائرية',
-    'النص الحجاجي — بناؤه وخصائصه', 'التعبير عن الرأي والمناقشة',
-    'الإنشاء الحر — أساليبه', 'الجملة الفعلية المعقدة',
-    'أسلوب الشرط والاستثناء', 'البلاغة — الكناية والمجاز'
-  ],
-  '4am_Francais': [
-    'Le texte argumentatif — thèse et arguments', 'Donner son opinion et la justifier',
-    'La concession et l\'opposition', 'Le texte de presse — l\'éditorial',
-    'La lettre formelle de réclamation', 'Le résumé de texte argumentatif',
-    'Les figures de style — ironie et euphémisme', 'Les articulateurs logiques avancés',
-    'La subordonnée de cause, conséquence, but', 'Préparation à l\'écrit du BEM'
-  ],
-  '4am_Anglais': [
-    'Present Perfect — life experiences', 'Passive voice', 'Reported speech',
-    'Conditional sentences (type 1 & 2)', 'Modal verbs (must, should, might)',
-    'Writing a formal letter', 'Reading articles and editorials',
-    'Environment and ecology vocabulary', 'Technology and modern life',
-    'BEM exam preparation — comprehension and writing'
-  ],
-  '4am_Mathematiques': [
-    'الأعداد الحقيقية وخصائصها', 'القيمة المطلقة',
-    'الحساب الحرفي — التوسيع والتحليل', 'المعادلات والمتراجحات',
-    'المنظومات من معادلتين', 'الدوال — تعريف ودراسة',
-    'الدالة الخطية والتآلفية', 'الإحصاء — التمثيلات البيانية',
-    'الاحتمالات', 'التحضير لامتحان البيام — رياضيات'
-  ],
-  '4am_Histoire-Geographie': [
-    'الجزائر المستقلة — السياسة والاقتصاد', 'التحولات الاقتصادية في الجزائر',
-    'الجزائر والعالم العربي', 'الجزائر والعالم', 'العولمة وتحدياتها',
-    'التنمية البشرية', 'النزاعات الدولية وحل النزاعات',
-    'البيئة والتنمية المستدامة', 'الموارد الطبيعية في العالم',
-    'التحضير لامتحان البيام — التاريخ والجغرافيا'
-  ],
-
-  // ─── BEM ───
-  'brevet_Arabe': [
-    'مراجعة النص الحجاجي', 'مراجعة النص السردي والوصفي',
-    'مراجعة الشعر الجزائري الحديث', 'مراجعة قواعد اللغة العربية',
-    'التعبير الكتابي — الإنشاء', 'مواضيع بيام سابقة — العربية'
-  ],
-  'brevet_Francais': [
-    'Révision texte argumentatif', 'Révision texte narratif et descriptif',
-    'Révision grammaire et conjugaison', 'Expression écrite BEM',
-    'Annales BEM Français — sujets corrigés'
-  ],
-  'brevet_Mathematiques': [
-    'مراجعة الجبر — المعادلات والدوال', 'مراجعة الهندسة',
-    'مراجعة الإحصاء والاحتمالات', 'مواضيع بيام سابقة — رياضيات'
-  ],
-  'brevet_Sciences Naturelles': [
-    'مراجعة الوراثة والكروموسومات', 'مراجعة المناعة والجهاز العصبي',
-    'مراجعة البيئة والتوازن', 'مواضيع بيام سابقة — العلوم الطبيعية'
-  ],
-  'brevet_Physique-Chimie': [
-    'مراجعة الكهرباء', 'مراجعة الضوء والبصريات',
-    'مراجعة الكيمياء', 'مواضيع بيام سابقة — الفيزياء والكيمياء'
-  ],
-  'brevet_Histoire-Geographie': [
-    'مراجعة الثورة الجزائرية', 'مراجعة الجزائر المستقلة',
-    'مراجعة الجغرافيا العالمية', 'مواضيع بيام سابقة — التاريخ والجغرافيا'
-  ],
-
-  // ─── 1AS SCIENTIFIQUE ───
-  '1as_scientifique_Arabe': [
-    'اللغة العربية والهوية الوطنية', 'الأدب الجزائري المعاصر — قصائد مختارة',
-    'تحليل النص الأدبي', 'المقالة الأدبية والنقدية',
-    'أساليب التعبير — الإقناع والحجاج', 'الجملة العربية — التعقيد والتركيب',
-    'البلاغة العربية — علم البيان', 'البلاغة — علم المعاني',
-    'المسرح الجزائري', 'الإنشاء الأدبي'
-  ],
-  '1as_scientifique_Francais': [
-    'Le texte explicatif scientifique', 'L\'argumentation et la démonstration',
-    'La nouvelle littéraire', 'La vulgarisation scientifique',
-    'Le compte-rendu et la synthèse', 'La correspondance professionnelle',
-    'Les connecteurs et la cohérence textuelle', 'L\'expression écrite soignée',
-    'La lecture analytique', 'Préparation aux épreuves de 1ère AS'
-  ],
-  '1as_scientifique_Anglais': [
-    'Science and technology vocabulary', 'Reading scientific texts',
-    'Writing a scientific report', 'Present Perfect and Past Simple',
-    'Passive constructions in science', 'Environmental issues',
-    'Describing processes and experiments', 'Expressing cause and effect',
-    'Debates and discussions', 'Research skills in English'
-  ],
-  '1as_scientifique_Mathematiques': [
-    'الأعداد الحقيقية — الترتيب والقيمة المطلقة', 'الدوال — عمومية',
-    'الدالة الخطية والتآلفية والمتقطعة', 'الدالة التربيعية',
-    'حساب المشتقة — القواعد الأساسية', 'دراسة الدوال بالمشتقة',
-    'المتتاليات الحسابية والهندسية', 'الإحصاء — المتوسط والانحراف',
-    'الاحتمالات — القانون والتوزيع', 'الهندسة التحليلية في المستوى'
-  ],
-  '1as_scientifique_Physique-Chimie': [
-    'الميكانيك — قوانين نيوتن', 'الحركة المستقيمية المنتظمة',
-    'الحركة المستقيمية المتغيرة', 'العمل والطاقة الميكانيكية',
-    'الكهرباء — الدارة الكهربائية المعقدة', 'قانون أوم للدارة الكاملة',
-    'الكيمياء — التحولات الكيميائية', 'حساب كميات المادة — المول',
-    'المحاليل المائية — تركيز الموار', 'الأحماض والقواعد — التعديل'
-  ],
-  '1as_scientifique_Sciences Naturelles': [
-    'الخلية — البنية التفصيلية والوظيفة', 'الأنسجة والأعضاء',
-    'البناء الضوئي — الآلية التفصيلية', 'التنفس الخلوي',
-    'الهضم والامتصاص — التفاصيل البيوكيميائية', 'الجهاز المناعي — الاستجابة المناعية',
-    'التكاثر الجنسي — الأمشاج والإخصاب', 'الوراثة — قوانين ماندل التفصيلية',
-    'الوراثة — الانتروبولوجيا الجزيئية', 'البيئة — التوازن البيئي والتأثيرات البشرية'
-  ],
-  '1as_scientifique_Histoire-Geographie': [
-    'العالم في أعقاب الحرب العالمية الأولى', 'الأزمة الاقتصادية 1929 وتداعياتها',
-    'الحرب العالمية الثانية — الأسباب والمراحل', 'الثورات والمقاومة خلال الحرب العالمية الثانية',
-    'الحرب الباردة — الثنائية القطبية', 'حركات التحرر في العالم الثالث',
-    'الجزائر والحرب الباردة', 'الجغرافيا — الفضاءات الاقتصادية العالمية',
-    'التنمية والتخلف في العالم', 'البيئة والتنمية المستدامة — المستوى العالمي'
-  ],
-  '1as_scientifique_Education Islamique': [
-    'القرآن الكريم — التجويد وأحكامه', 'تفسير سور قرآنية مختارة',
-    'الحديث النبوي الشريف — دراسة وتطبيق', 'الفقه الإسلامي — العبادات',
-    'الفقه الإسلامي — المعاملات', 'السيرة النبوية — الغزوات',
-    'الحضارة الإسلامية وإسهاماتها', 'الإسلام والمجتمع المعاصر',
-    'التصوف والروحانية في الإسلام', 'الأخلاق الإسلامية — التطبيق'
-  ],
-  '1as_scientifique_Philosophie': [
-    'تعريف الفلسفة وأسئلتها الكبرى', 'المنطق — القياس والاستنتاج',
-    'نظرية المعرفة — التجربة والعقل', 'فلسفة الوجود والكينونة',
-    'الأخلاق والقيم', 'الفلسفة السياسية — الدولة والسلطة',
-    'الفلسفة العربية الإسلامية — ابن رشد وابن سينا',
-    'الفلسفة الغربية الحديثة — ديكارت وكانط',
-    'فلسفة العلوم', 'التطبيق على نصوص فلسفية'
-  ],
-  '1as_lettres_Arabe': [
-    'الشعر العربي القديم — المعلقات', 'الشعر الأموي والعباسي',
-    'الشعر الأندلسي', 'الشعر العربي الحديث — الرومانسية',
-    'الشعر المعاصر — شعر التفعيلة', 'الأدب الجزائري — الشعر',
-    'النثر الفني — المقامة والرسالة', 'القصة القصيرة والرواية العربية',
-    'النقد الأدبي — المناهج', 'الإنشاء الأدبي المتقدم'
-  ],
-
-  // ─── 2AS MATH ───
-  '2as_math_Arabe': [
-    'الأدب العربي المعاصر — قراءات نقدية', 'تحليل الخطاب الأدبي',
-    'الموازين الشعرية — العروض', 'الأسلوبية وتحليل النص',
-    'الإنشاء الأدبي المتقدم', 'مواضيع البكالوريا — العربية'
-  ],
-  '2as_math_Francais': [
-    'Texte littéraire — analyse avancée', 'La dissertation littéraire',
-    'La contraction de texte', 'Lecture de textes philosophiques',
-    'Expression écrite niveau bac', 'Annales bac Français'
-  ],
-  '2as_math_Mathematiques': [
-    'الأعداد المركبة', 'الدوال الأسية واللوغاريتمية',
-    'المشتقة والتكاملية', 'المعادلات التفاضلية',
-    'الهندسة في الفضاء', 'الاحتمالات المتقدمة',
-    'المتتاليات المعقدة', 'التحليل العددي'
-  ],
-  '2as_math_Physique-Chimie': [
-    'الديناميك — قوانين نيوتن التطبيقية', 'الحركة الدورانية',
-    'الكهرومغناطيسية', 'الدوائر الكهربائية المتناوبة',
-    'الكيمياء العضوية — المقدمة', 'الكيمياء التحليلية',
-    'الموجات والبصريات', 'الفيزياء الحديثة — الكم'
-  ],
-
-  // ─── 2AS SCIENTIFIQUE ───
-  '2as_scientifique_Sciences Naturelles': [
-    'الجينيات الجزيئية — الحمض النووي DNA', 'تضاعف DNA',
-    'النسخ — تركيب RNA', 'الترجمة — تركيب البروتين',
-    'الطفرات الجينية وأسبابها', 'الوراثة المرتبطة بالجنس',
-    'تطور الأنواع — الدارونية', 'التكاثر الجنسي عند الإنسان — التفاصيل',
-    'الجهاز العصبي التكاملي', 'الغدد الصماء والتنسيق الهرموني'
-  ],
-  '2as_scientifique_Physique-Chimie': [
-    'الميكانيك الكلاسيكي المتقدم', 'الطاقة الحركية والطاقة الكامنة',
-    'الحركة الدورية', 'الكهرومغناطيسية — قانون فاراداي',
-    'الدوائر المتناوبة — RLC', 'البصريات الهندسية المتقدمة',
-    'الكيمياء العضوية — الهيدروكربونات', 'الكيمياء العضوية — المجموعات الوظيفية',
-    'الحركية الكيميائية', 'الكيمياء التحليلية'
-  ],
-
-  // ─── 2AS GESTION ───
-  '2as_gestion_Economie': [
-    'المفاهيم الاقتصادية الأساسية', 'الأنظمة الاقتصادية — الرأسمالية والاشتراكية',
-    'العرض والطلب والسعر التوازني', 'المؤسسة الاقتصادية — أنواعها وهياكلها',
-    'وظائف المؤسسة — الإنتاج والتسويق والمالية', 'النقود والبنوك والقروض',
-    'الميزانية العامة للدولة', 'الضرائب والجباية في الجزائر',
-    'التجارة الخارجية وميزان المدفوعات', 'المنظمات الاقتصادية الدولية — WTO وIMF'
-  ],
-  '2as_gestion_Droit': [
-    'مدخل إلى القانون — المفاهيم الأساسية', 'مصادر القانون في الجزائر',
-    'الشخصية القانونية — الأشخاص الطبيعيون والاعتباريون', 'نظرية العقد — الأركان والشروط',
-    'عقود البيع والإيجار', 'قانون العمل — علاقة الاستخدام',
-    'قانون العمل — حقوق وواجبات العمال', 'الشركات التجارية — أنواعها',
-    'الإفلاس والتسوية القضائية', 'حل النزاعات التجارية'
-  ],
-
-  // ─── 2AS LANGUE ───
-  '2as_langue_Espagnol': [
-    'El presente de indicativo', 'Los verbos irregulares', 'El pasado — pretérito indefinido',
-    'El imperfecto de indicativo', 'El futuro simple', 'Describir personas y lugares',
-    'Hablar de costumbres y tradiciones', 'La cultura española e hispanoamericana',
-    'Expresar opiniones y argumentar', 'Preparación para el baccalauréat'
-  ],
-  '2as_langue_Allemand': [
-    'Das Präsens — regelmäßige Verben', 'Das Perfekt', 'Das Präteritum',
-    'Der Imperativ', 'Die Modalverben', 'Personen und Orte beschreiben',
-    'Über Alltag und Gewohnheiten sprechen', 'Deutsche Kultur und Traditionen',
-    'Meinungen ausdrücken', 'Vorbereitung auf das Baccalauréat'
-  ],
-
-  // ─── 2AS PHILO ───
-  '2as_philo_Philosophie': [
-    'الوعي والإدراك', 'الحرية والحتمية', 'الأخلاق والواجب',
-    'العدالة والقانون', 'الدولة والسلطة السياسية',
-    'الفلسفة والعلوم', 'الفن والجمال', 'الدين والميتافيزيقا',
-    'الوجودية — سارتر وهيدغر', 'تحليل نصوص فلسفية للبكالوريا'
-  ],
-
-  // ─── 3AS & BAC (même programme approfondi) ───
-  '3as_scientifique_Sciences Naturelles': [
-    'الجينيات والتقنيات الحيوية — الهندسة الوراثية', 'استنساخ الكائنات الحية',
-    'تطور الأنواع — الأدلة والآليات', 'الجيولوجيا — بنية الأرض الداخلية',
-    'تكتونية الصفائح', 'الزلازل والبراكين', 'دورة الصخور',
-    'علم البيئة المتقدم — السلاسل الغذائية', 'التلوث البيئي وتداعياته',
-    'مراجعة شاملة للبكالوريا — علوم الطبيعة'
-  ],
-  '3as_scientifique_Physique-Chimie': [
-    'الميكانيك المتقدم — قانون نيوتن الثاني التطبيقي', 'الحركة الدورانية الموحدة',
-    'الكهرومغناطيس — مبدأ التحريض', 'دوائر RLC والرنين',
-    'البصريات الموجية — الحيود والتداخل', 'الفيزياء الحديثة — الكمية',
-    'الكيمياء العضوية — التفاعلات الأساسية', 'البوليميرات والمواد الاصطناعية',
-    'الحركية الكيميائية وسرعة التفاعل', 'مراجعة شاملة للبكالوريا — فيزياء وكيمياء'
-  ],
-  '3as_gestion_Economie': [
-    'الاقتصاد الكلي — النمو والتضخم والبطالة', 'السياسة المالية والنقدية',
-    'الاقتصاد الجزائري — الهيكل والتحديات', 'الاستثمار والتمويل',
-    'التجارة الدولية — النظريات والاتفاقيات', 'التكتلات الاقتصادية الإقليمية',
-    'التنمية الاقتصادية في الدول النامية', 'العولمة الاقتصادية وتداعياتها',
-    'مواضيع بكالوريا سابقة — الاقتصاد', 'مراجعة شاملة — تسيير واقتصاد'
-  ],
-  '3as_gestion_Droit': [
-    'القانون الدستوري الجزائري', 'القانون الإداري', 'قانون الأعمال',
-    'عقود التأمين', 'القانون الدولي الخاص', 'قانون المنافسة',
-    'قانون الملكية الفكرية', 'التحكيم وحل النزاعات',
-    'مواضيع بكالوريا سابقة — القانون', 'مراجعة شاملة — القانون'
-  ]
-};
-
-// Copies pour BAC (même programme que 3as)
-var bacs = ['bac_scientifique_Sciences Naturelles','bac_scientifique_Physique-Chimie',
-            'bac_gestion_Economie','bac_gestion_Droit'];
-bacs.forEach(function(k) { LECONS[k] = LECONS[k.replace('bac_','3as_')] || []; });
-
-// Fallback générique
-function getLecons(annee, filiere, matiere) {
-  var keys = [
-    annee + '_' + filiere + '_' + matiere,
-    annee + '_' + matiere
-  ];
-  for (var i = 0; i < keys.length; i++) {
-    if (LECONS[keys[i]] && LECONS[keys[i]].length) return LECONS[keys[i]];
-  }
-  return [
-    'الفصل الأول — المفاهيم الأساسية',
-    'الفصل الثاني — التطبيقات والأمثلة',
-    'الفصل الثالث — التعمق والتوسع',
-    'الفصل الرابع — المراجعة والتمارين',
-    'الفصل الخامس — مواضيع سابقة'
-  ];
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 5000);
 }
 
-// ═══════════════════════════════════════
-// STATE & LOGIQUE
-// ═══════════════════════════════════════
-var state = { annee:'', filiere:'', matiere:'', lecon:'', difficulte:'' };
-var LYCEE_ANNEES = ['1as','2as','3as','bac'];
+// ── GENERATE ──
+async function generate() {
+  if (!token) { location.href = 'signin.html'; return; }
+  try {
+    const res  = await fetch(`${API}/api/ia/quiz`, {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json','Authorization':'Bearer '+token },
+      body: JSON.stringify({ annee, filiere, matiere, lecon, difficulte })
+    });
+    const data = await res.json();
+    document.getElementById('loadingDiv').style.display = 'none';
 
-document.querySelectorAll('[data-annee]').forEach(function(el) {
-  el.addEventListener('click', function() { selectAnnee(el.dataset.annee, el.dataset.lycee === '1'); });
-});
+    if (!res.ok) { showToast('❌ ' + (data.message || 'Erreur serveur')); return; }
 
-function selectAnnee(annee, isLycee) {
-  state = { annee: annee, filiere:'', matiere:'', lecon:'', difficulte:'' };
-  document.querySelectorAll('[data-annee]').forEach(function(p) { p.classList.toggle('selected', p.dataset.annee === annee); });
-  document.getElementById('sec-filiere').classList.toggle('hidden', !isLycee);
-  document.getElementById('sec-matiere').classList.add('hidden');
-  document.getElementById('sec-lecon').classList.add('hidden');
-  document.getElementById('sec-diff').classList.add('hidden');
-  document.getElementById('num-mat').textContent   = isLycee ? '3' : '2';
-  document.getElementById('num-lecon').textContent = isLycee ? '4' : '3';
-  document.getElementById('num-diff').textContent  = isLycee ? '5' : '4';
-  if (!isLycee) {
-    buildMatieres(MATIERES_MOYEN[annee] || []);
-    document.getElementById('sec-matiere').classList.remove('hidden');
+    if (data.isMathPhys && data.exercices?.length) {
+      exercices = data.exercices;
+      exTotal   = exercices.reduce((s,e) => s+(e.bareme||5), 0);
+      document.getElementById('exerciceContainer').style.display = 'block';
+      renderExercice();
+    } else if (data.questions?.length) {
+      questions = data.questions;
+      document.getElementById('quizContainer').style.display = 'block';
+      renderQuestion();
+    } else {
+      showToast('❌ Réponse IA invalide — réessaie');
+    }
+  } catch(e) {
+    document.getElementById('loadingDiv').style.display = 'none';
+    showToast('❌ Impossible de contacter le serveur');
+  }
+}
+
+// ── QCM ──
+function renderQuestion() {
+  const q     = questions[current];
+  const total = questions.length;
+  document.getElementById('progressFill').style.width = ((current/total)*100) + '%';
+  document.getElementById('infoScore').textContent    = `${score}/${total} pts`;
+  document.getElementById('btnNext').classList.remove('show');
+
+  const letters = ['أ','ب','ج','د'];
+  const isFr    = isLang;
+
+  document.getElementById('questionContainer').innerHTML = `
+    <div class="question-card">
+      <div class="q-num">السؤال ${current+1} / ${total}</div>
+      <div class="q-text ${isFr?'fr':''}">${q.question}</div>
+      <div class="answers-grid">
+        ${(q.options||[]).map((opt,i) => `
+          <button class="ans-btn ${isFr?'fr':''}" onclick="selectAnswer(${i})" id="ans_${i}">
+            <span class="ans-letter">${isFr?String.fromCharCode(65+i):letters[i]}</span>
+            <span>${opt}</span>
+          </button>`).join('')}
+      </div>
+      <div class="expl-box" id="explBox">
+        <div class="expl-title">💡 الشرح · EXPLICATION</div>
+        <div class="expl-text ${isFr?'fr':''}">${q.explication||q.explanation||''}</div>
+      </div>
+    </div>`;
+}
+
+function selectAnswer(idx) {
+  const q = questions[current];
+  document.querySelectorAll('.ans-btn').forEach(b => b.disabled = true);
+  const correct = Number(q.correct);
+  document.getElementById(`ans_${idx}`).classList.add(idx === correct ? 'correct' : 'wrong');
+  if (idx !== correct) document.getElementById(`ans_${correct}`).classList.add('correct');
+  if (idx === correct) score++;
+  document.getElementById('infoScore').textContent = `${score}/${questions.length} pts`;
+  document.getElementById('explBox').classList.add('show');
+  const btnNext = document.getElementById('btnNext');
+  btnNext.classList.add('show');
+  btnNext.textContent = current === questions.length-1
+    ? '🏆 Voir les résultats · النتائج'
+    : 'السؤال التالي · Question suivante →';
+}
+
+function nextQuestion() {
+  current++;
+  if (current >= questions.length) {
+    showResults(score, questions.length, false);
   } else {
-    buildFilieres(annee);
+    renderQuestion();
   }
-  updateCTA();
 }
 
-function buildFilieres(annee) {
-  var container = document.getElementById('pills-filiere');
-  container.innerHTML = '';
-  (FILIERES[annee] || []).forEach(function(f) {
-    var el = document.createElement('div');
-    el.className = 'pill';
-    el.dataset.filiere = f.id;
-    el.innerHTML = f.fr + ' <span style="font-family:Tajawal;font-size:0.8rem;opacity:0.7">· ' + f.ar + '</span>';
-    el.addEventListener('click', function() { selectFiliere(f.id, state.annee); });
-    container.appendChild(el);
-  });
+// ── EXERCICES INTERACTIFS ──
+function renderExercice() {
+  const ex  = exercices[exCurrent];
+  const tot = exercices.length;
+  document.getElementById('progressFill').style.width = ((exCurrent/tot)*100) + '%';
+  document.getElementById('infoScore').textContent    = `${exEarned}/${exTotal} pts`;
+
+  document.getElementById('exerciceContainer').innerHTML = `
+    <div class="ex-card">
+      <div class="q-num">تمرين ${exCurrent+1} / ${tot}</div>
+      <div class="ex-titre">📐 ${ex.titre||''}</div>
+      <div class="ex-enonce">${(ex.enonce||'').replace(/\n/g,'<br>')}</div>
+      ${ex.donnees?`<div class="ex-donnees">📊 المعطيات:<br>${ex.donnees.replace(/\n/g,'<br>')}</div>`:''}
+      <div class="ex-questions">
+        ${(ex.questions||[]).map(q=>`<div class="ex-q">${q}</div>`).join('')}
+      </div>
+      <div class="student-area">
+        <label>✏️ إجابتك خطوة بخطوة · Ta réponse étape par étape</label>
+        <textarea id="studentAnswer" placeholder="اكتب إجابتك هنا... Écris ta réponse ici..."></textarea>
+        <button class="btn-submit-answer" id="btnSubmit" onclick="submitAnswer()">
+          ✅ إرسال الإجابة · Soumettre
+        </button>
+      </div>
+      <div class="eval-result" id="evalResult"></div>
+    </div>`;
 }
 
-function selectFiliere(filiere, annee) {
-  state.filiere = filiere; state.matiere = ''; state.lecon = '';
-  document.querySelectorAll('[data-filiere]').forEach(function(p) { p.classList.toggle('selected', p.dataset.filiere === filiere); });
-  var mats = (MATIERES_LYCEE[annee] && MATIERES_LYCEE[annee][filiere]) || [];
-  buildMatieres(mats);
-  document.getElementById('sec-matiere').classList.remove('hidden');
-  document.getElementById('sec-lecon').classList.add('hidden');
-  document.getElementById('sec-diff').classList.add('hidden');
-  updateCTA();
+async function submitAnswer() {
+  const answer = document.getElementById('studentAnswer').value.trim();
+  if (!answer) { showToast('اكتب إجابتك أولاً · Écris ta réponse d\'abord !'); return; }
+  const btn = document.getElementById('btnSubmit');
+  btn.disabled = true;
+  btn.textContent = '⏳ جارٍ التصحيح... Correction en cours...';
+  const ex = exercices[exCurrent];
+  try {
+    const res  = await fetch(`${API}/api/ia/evaluate`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body: JSON.stringify({ enonce:ex.enonce, donnees:ex.donnees||'', questions:ex.questions||[],
+        correction:ex.correction, studentAnswer:answer, bareme:ex.bareme||5, matiere, annee })
+    });
+    const ev = await res.json();
+    if (!res.ok) throw new Error(ev.message);
+    const pts   = Number(ev.points_obtenus)||0;
+    exEarned   += pts;
+    document.getElementById('infoScore').textContent = `${exEarned}/${exTotal} pts`;
+    const color = pts >= (ex.bareme*.7)?'var(--emerald)':pts >= (ex.bareme*.4)?'var(--gold)':'var(--coral)';
+    const emoji = pts >= (ex.bareme*.7)?'🌟':pts >= (ex.bareme*.4)?'👍':'💪';
+    const evalEl = document.getElementById('evalResult');
+    evalEl.style.display = 'block';
+    evalEl.classList.add('show');
+    evalEl.innerHTML = `
+      <div style="background:rgba(26,35,64,.9);border:1px solid ${color};border-radius:14px;padding:1.2rem">
+        <div style="display:flex;justify-content:space-between;margin-bottom:.8rem">
+          <div style="font-weight:800;color:${color}">${emoji} ${ev.appreciation||'تم التصحيح'}</div>
+          <div style="font-weight:800;color:${color};font-size:1.1rem">${pts}/${ex.bareme} pts</div>
+        </div>
+        ${ev.points_positifs?`<div style="margin-bottom:.7rem"><div style="font-size:.7rem;color:var(--emerald);font-weight:700;letter-spacing:1px;margin-bottom:.3rem">✅ ما أجدت فيه</div><div style="font-size:.85rem;color:var(--muted);font-family:Tajawal;direction:rtl">${ev.points_positifs}</div></div>`:''}
+        <div style="margin-bottom:.7rem">
+          <div style="font-size:.7rem;color:var(--gold);font-weight:700;letter-spacing:1px;margin-bottom:.3rem">📖 التصحيح التفصيلي</div>
+          <div style="font-size:.85rem;color:var(--muted);line-height:1.7;font-family:Tajawal;direction:rtl">${(ev.correction_detaillee||'').replace(/\n/g,'<br>')}</div>
+        </div>
+        ${ev.points_ameliorer?`<div style="margin-bottom:.7rem"><div style="font-size:.7rem;color:var(--coral);font-weight:700;letter-spacing:1px;margin-bottom:.3rem">💡 ما يجب تحسينه</div><div style="font-size:.85rem;color:var(--muted);font-family:Tajawal;direction:rtl">${ev.points_ameliorer}</div></div>`:''}
+        ${ev.encouragement?`<div style="font-size:.9rem;color:var(--purple);text-align:center;margin-top:.5rem;font-family:Tajawal">${ev.encouragement}</div>`:''}
+        <button class="btn-next-ex" onclick="nextExercice()">
+          ${exCurrent<exercices.length-1?'التمرين التالي · Exercice suivant →':'🏆 النتائج · Résultats'}
+        </button>
+      </div>`;
+    btn.style.display = 'none';
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = '✅ إرسال الإجابة · Soumettre';
+    showToast('❌ ' + e.message);
+  }
 }
 
-function buildMatieres(mats) {
-  var grid = document.getElementById('grid-matiere');
-  grid.innerHTML = '';
-  mats.forEach(function(m) {
-    var el = document.createElement('div');
-    el.className = 'mat-card';
-    el.innerHTML = '<div class="mat-icon">' + m.icon + '</div><div><div class="mat-name-fr">' + m.fr + '</div><div class="mat-name-ar">' + m.ar + '</div></div>';
-    el.addEventListener('click', function() { selectMatiere(m.id); });
-    grid.appendChild(el);
-  });
+function nextExercice() {
+  exCurrent++;
+  if (exCurrent >= exercices.length) {
+    showResults(exEarned, exTotal, true);
+  } else {
+    renderExercice();
+  }
 }
 
-function selectMatiere(matiere) {
-  state.matiere = matiere; state.lecon = '';
-  document.querySelectorAll('.mat-card').forEach(function(c) {
-    c.classList.toggle('selected', c.querySelector('.mat-name-fr') && c.querySelector('.mat-name-fr').closest('.mat-card') === c && false);
-  });
-  // Marquer visuellement la carte sélectionnée
-  document.querySelectorAll('.mat-card').forEach(function(c) {
-    var fn = c.querySelector('.mat-name-fr');
-    // On retrouve la matière via le onclick stocké
-  });
-  // Rebuild: on re-marque par comparaison
-  var allCards = document.querySelectorAll('.mat-card');
-  var mats = getMatieresList();
-  allCards.forEach(function(c, i) { c.classList.toggle('selected', mats[i] && mats[i].id === matiere); });
-
-  buildLecons(getLecons(state.annee, state.filiere, matiere));
-  document.getElementById('sec-lecon').classList.remove('hidden');
-  document.getElementById('sec-diff').classList.add('hidden');
-  updateCTA();
+// ── RESULTS ──
+function showResults(earned, total, isMath) {
+  document.getElementById('quizContainer').style.display   = 'none';
+  document.getElementById('exerciceContainer').style.display = 'none';
+  document.getElementById('progressFill').style.width = '100%';
+  const rc  = document.getElementById('resultsCard');
+  rc.classList.add('show');
+  const pct = total>0?Math.round((earned/total)*100):0;
+  document.getElementById('resEmoji').textContent = pct>=70?'🏆':pct>=40?'👍':'💪';
+  document.getElementById('resScore').textContent = `${earned}/${total}`;
+  document.getElementById('resMsg').textContent   = pct>=70
+    ? `Excellent ! ${pct}% — Tu maîtrises cette leçon !`
+    : pct>=40
+      ? `Bien ! ${pct}% — Continue à t'entraîner !`
+      : `${pct}% — Ne te décourage pas, révise et réessaie !`;
+  document.getElementById('resAr').textContent = pct>=70
+    ? `ممتاز! ${pct}٪ — أنت تتقن هذا الدرس!`
+    : pct>=40
+      ? `أحسنت! ${pct}٪ — واصل التدريب!`
+      : `${pct}٪ — لا تستسلم، راجع ثم حاول مجدداً!`;
+  // Sauvegarder le score
+  if (token) {
+    fetch(`${API}/api/quiz/submit`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body: JSON.stringify({ score:earned, total, matiere, lecon, annee, filiere,
+        isMath, points: isMath ? earned*2 : earned*10 })
+    }).catch(()=>{});
+  }
 }
 
-function getMatieresList() {
-  var isLycee = LYCEE_ANNEES.indexOf(state.annee) !== -1;
-  if (isLycee) return (MATIERES_LYCEE[state.annee] && MATIERES_LYCEE[state.annee][state.filiere]) || [];
-  return MATIERES_MOYEN[state.annee] || [];
-}
-
-function buildLecons(lecons) {
-  var list = document.getElementById('list-lecon');
-  list.innerHTML = '';
-  list._lecons = lecons;
-  lecons.forEach(function(l, i) {
-    var el = document.createElement('div');
-    el.className = 'lecon-item';
-    el.innerHTML = '<span class="lecon-num">0' + (i < 9 ? '0' : '') + (i+1) + '</span><div class="lecon-ar">' + l + '</div><span class="check">✓</span>';
-    el.addEventListener('click', function() { selectLecon(i, el, l); });
-    list.appendChild(el);
-  });
-}
-
-function selectLecon(idx, el, lecon) {
-  document.querySelectorAll('.lecon-item').forEach(function(i) { i.classList.remove('selected'); });
-  el.classList.add('selected');
-  state.lecon = lecon;
-  document.getElementById('sec-diff').classList.remove('hidden');
-  updateCTA();
-}
-
-document.querySelectorAll('.diff-card').forEach(function(card) {
-  card.addEventListener('click', function() {
-    document.querySelectorAll('.diff-card').forEach(function(c) { c.classList.remove('selected'); });
-    card.classList.add('selected');
-    state.difficulte = card.dataset.diff;
-    updateCTA();
-  });
-});
-
-function updateCTA() {
-  var isLycee = LYCEE_ANNEES.indexOf(state.annee) !== -1;
-  var ready = state.annee && state.matiere && state.lecon && state.difficulte && (!isLycee || state.filiere);
-  document.getElementById('btn-start').classList.toggle('ready', !!ready);
-}
-
-function startQuiz() {
-  var p = new URLSearchParams({
-    annee: state.annee, filiere: state.filiere || '',
-    matiere: state.matiere, lecon: state.lecon, difficulte: state.difficulte
-  });
-  window.location.href = 'quiz-play.html?' + p.toString();
-}
+generate();
 </script>
 </body>
 </html>
