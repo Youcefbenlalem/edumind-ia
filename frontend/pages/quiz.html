@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="fr">
 <head>
   <meta charset="UTF-8"/>
@@ -29,175 +28,172 @@
     .back-btn:hover { color: var(--emerald); }
     .nav-title { font-size: 1.1rem; font-weight: 800; color: var(--emerald); }
 
-```
-main { position: relative; z-index: 1; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem; }
+    main { position: relative; z-index: 1; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem; }
 
-/* PAGE HEADER */
-.page-header { text-align: center; margin-bottom: 3rem; }
-.page-title-fr { font-size: clamp(2rem,5vw,3.5rem); font-weight: 800; }
-.page-title-ar {
-  font-family: 'Tajawal'; direction: rtl;
-  font-size: clamp(1.4rem,3vw,2.2rem); color: var(--muted); margin-bottom: 0.5rem;
-}
-.page-sub { color: var(--muted); font-size: 0.95rem; margin-top: 0.5rem; }
-.page-sub-ar { font-family: 'Tajawal'; direction: rtl; color: rgba(136,150,179,0.7); font-size: 0.9rem; }
+    /* PAGE HEADER */
+    .page-header { text-align: center; margin-bottom: 3rem; }
+    .page-title-fr { font-size: clamp(2rem,5vw,3.5rem); font-weight: 800; }
+    .page-title-ar {
+      font-family: 'Tajawal'; direction: rtl;
+      font-size: clamp(1.4rem,3vw,2.2rem); color: var(--muted); margin-bottom: 0.5rem;
+    }
+    .page-sub { color: var(--muted); font-size: 0.95rem; margin-top: 0.5rem; }
+    .page-sub-ar { font-family: 'Tajawal'; direction: rtl; color: rgba(136,150,179,0.7); font-size: 0.9rem; }
 
-/* SETUP CARD */
-.setup-card {
-  background: rgba(26,35,64,0.7); border: 1px solid rgba(0,201,167,0.12);
-  border-radius: 24px; padding: 2.5rem; backdrop-filter: blur(12px);
-  margin-bottom: 2rem;
-}
+    /* SETUP CARD */
+    .setup-card {
+      background: rgba(26,35,64,0.7); border: 1px solid rgba(0,201,167,0.12);
+      border-radius: 24px; padding: 2.5rem; backdrop-filter: blur(12px);
+      margin-bottom: 2rem;
+    }
 
-/* STEP INDICATOR */
-.steps {
-  display: flex; gap: 0.5rem; margin-bottom: 2.5rem; align-items: center;
-}
-.step {
-  flex: 1; height: 4px; border-radius: 2px;
-  background: rgba(255,255,255,0.08); transition: background 0.4s;
-}
-.step.active { background: var(--emerald); }
-.step.done { background: rgba(0,201,167,0.4); }
+    /* STEP INDICATOR */
+    .steps {
+      display: flex; gap: 0.5rem; margin-bottom: 2.5rem; align-items: center;
+    }
+    .step {
+      flex: 1; height: 4px; border-radius: 2px;
+      background: rgba(255,255,255,0.08); transition: background 0.4s;
+    }
+    .step.active { background: var(--emerald); }
+    .step.done { background: rgba(0,201,167,0.4); }
 
-/* SELECT GROUPS */
-.select-group { margin-bottom: 2rem; }
-.select-label {
-  display: flex; justify-content: space-between; align-items: center;
-  font-size: 0.75rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
-  color: var(--emerald); margin-bottom: 1rem;
-}
-.label-ar { font-family: 'Tajawal'; font-size: 0.9rem; text-transform: none; letter-spacing: 0; }
+    /* SELECT GROUPS */
+    .select-group { margin-bottom: 2rem; }
+    .select-label {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 0.75rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+      color: var(--emerald); margin-bottom: 1rem;
+    }
+    .label-ar { font-family: 'Tajawal'; font-size: 0.9rem; text-transform: none; letter-spacing: 0; }
 
-/* OPTION BUTTONS */
-.options-grid {
-  display: flex; flex-wrap: wrap; gap: 0.6rem;
-}
-.opt-btn {
-  padding: 0.6rem 1.1rem;
-  background: rgba(255,255,255,0.04);
-  border: 1.5px solid rgba(255,255,255,0.08);
-  border-radius: 10px;
-  color: var(--white); cursor: pointer; font-family: 'Syne'; font-size: 0.85rem;
-  transition: all 0.25s; white-space: nowrap;
-}
-.opt-btn:hover { border-color: rgba(0,201,167,0.4); background: rgba(0,201,167,0.06); }
-.opt-btn.selected {
-  background: rgba(0,201,167,0.15); border-color: var(--emerald);
-  color: var(--emerald); font-weight: 700;
-}
+    /* OPTION BUTTONS */
+    .options-grid {
+      display: flex; flex-wrap: wrap; gap: 0.6rem;
+    }
+    .opt-btn {
+      padding: 0.6rem 1.1rem;
+      background: rgba(255,255,255,0.04);
+      border: 1.5px solid rgba(255,255,255,0.08);
+      border-radius: 10px;
+      color: var(--white); cursor: pointer; font-family: 'Syne'; font-size: 0.85rem;
+      transition: all 0.25s; white-space: nowrap;
+    }
+    .opt-btn:hover { border-color: rgba(0,201,167,0.4); background: rgba(0,201,167,0.06); }
+    .opt-btn.selected {
+      background: rgba(0,201,167,0.15); border-color: var(--emerald);
+      color: var(--emerald); font-weight: 700;
+    }
 
-.opt-btn.diff-easy.selected { background: rgba(52,211,153,0.15); border-color: #34d399; color: #34d399; }
-.opt-btn.diff-normal.selected { background: rgba(245,200,66,0.15); border-color: var(--gold); color: var(--gold); }
-.opt-btn.diff-hard.selected { background: rgba(255,95,109,0.15); border-color: var(--red); color: var(--red); }
+    .opt-btn.diff-easy.selected { background: rgba(52,211,153,0.15); border-color: #34d399; color: #34d399; }
+    .opt-btn.diff-normal.selected { background: rgba(245,200,66,0.15); border-color: var(--gold); color: var(--gold); }
+    .opt-btn.diff-hard.selected { background: rgba(255,95,109,0.15); border-color: var(--red); color: var(--red); }
 
-.hidden { display: none !important; }
+    .hidden { display: none !important; }
 
-.btn-start {
-  width: 100%; padding: 1.1rem;
-  background: linear-gradient(135deg, var(--emerald), var(--emerald-dark));
-  border: none; border-radius: 14px;
-  color: white; cursor: pointer;
-  font-family: 'Tajawal','Syne'; font-size: 1.1rem; font-weight: 800;
-  transition: all 0.3s; box-shadow: 0 6px 25px rgba(0,201,167,0.3);
-  margin-top: 1.5rem;
-}
-.btn-start:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(0,201,167,0.4); }
-.btn-start:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-start {
+      width: 100%; padding: 1.1rem;
+      background: linear-gradient(135deg, var(--emerald), var(--emerald-dark));
+      border: none; border-radius: 14px;
+      color: white; cursor: pointer;
+      font-family: 'Tajawal','Syne'; font-size: 1.1rem; font-weight: 800;
+      transition: all 0.3s; box-shadow: 0 6px 25px rgba(0,201,167,0.3);
+      margin-top: 1.5rem;
+    }
+    .btn-start:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(0,201,167,0.4); }
+    .btn-start:disabled { opacity: 0.4; cursor: not-allowed; }
 
-/* QUIZ AREA */
-.quiz-area { display: none; }
-.quiz-area.active { display: block; }
+    /* QUIZ AREA */
+    .quiz-area { display: none; }
+    .quiz-area.active { display: block; }
 
-.quiz-header {
-  display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 1.5rem;
-}
-.quiz-info { font-size: 0.85rem; color: var(--muted); }
-.quiz-score { font-size: 1rem; font-weight: 700; color: var(--gold); }
+    .quiz-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 1.5rem;
+    }
+    .quiz-info { font-size: 0.85rem; color: var(--muted); }
+    .quiz-score { font-size: 1rem; font-weight: 700; color: var(--gold); }
 
-.progress-bar { height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; margin-bottom: 2rem; overflow: hidden; }
-.progress-fill { height: 100%; background: linear-gradient(90deg, var(--emerald), var(--gold)); border-radius: 3px; transition: width 0.5s ease; }
+    .progress-bar { height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; margin-bottom: 2rem; overflow: hidden; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, var(--emerald), var(--gold)); border-radius: 3px; transition: width 0.5s ease; }
 
-.question-card {
-  background: rgba(26,35,64,0.7); border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 20px; padding: 2rem; margin-bottom: 1.5rem;
-  backdrop-filter: blur(12px);
-}
-.q-num { font-size: 0.7rem; letter-spacing: 2px; color: var(--emerald); margin-bottom: 0.8rem; font-weight: 700; }
-.q-text { font-size: 1.1rem; font-weight: 600; line-height: 1.6; margin-bottom: 1.5rem; }
+    .question-card {
+      background: rgba(26,35,64,0.7); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px; padding: 2rem; margin-bottom: 1.5rem;
+      backdrop-filter: blur(12px);
+    }
+    .q-num { font-size: 0.7rem; letter-spacing: 2px; color: var(--emerald); margin-bottom: 0.8rem; font-weight: 700; }
+    .q-text { font-size: 1.1rem; font-weight: 600; line-height: 1.6; margin-bottom: 1.5rem; }
 
-.answers-grid { display: flex; flex-direction: column; gap: 0.8rem; }
-.ans-btn {
-  padding: 1rem 1.2rem;
-  background: rgba(255,255,255,0.04);
-  border: 1.5px solid rgba(255,255,255,0.08);
-  border-radius: 12px; text-align: left;
-  color: var(--white); cursor: pointer; font-family: 'Syne'; font-size: 0.9rem;
-  transition: all 0.25s; display: flex; align-items: center; gap: 0.8rem;
-}
-.ans-btn:hover:not(:disabled) { border-color: rgba(0,201,167,0.4); background: rgba(0,201,167,0.06); }
-.ans-btn.correct { border-color: #34d399; background: rgba(52,211,153,0.12); color: #34d399; }
-.ans-btn.wrong { border-color: var(--red); background: rgba(255,95,109,0.1); color: var(--red); }
-.ans-letter { width: 28px; height: 28px; border-radius: 8px; background: rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; flex-shrink: 0; }
+    .answers-grid { display: flex; flex-direction: column; gap: 0.8rem; }
+    .ans-btn {
+      padding: 1rem 1.2rem;
+      background: rgba(255,255,255,0.04);
+      border: 1.5px solid rgba(255,255,255,0.08);
+      border-radius: 12px; text-align: left;
+      color: var(--white); cursor: pointer; font-family: 'Syne'; font-size: 0.9rem;
+      transition: all 0.25s; display: flex; align-items: center; gap: 0.8rem;
+    }
+    .ans-btn:hover:not(:disabled) { border-color: rgba(0,201,167,0.4); background: rgba(0,201,167,0.06); }
+    .ans-btn.correct { border-color: #34d399; background: rgba(52,211,153,0.12); color: #34d399; }
+    .ans-btn.wrong { border-color: var(--red); background: rgba(255,95,109,0.1); color: var(--red); }
+    .ans-letter { width: 28px; height: 28px; border-radius: 8px; background: rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; flex-shrink: 0; }
 
-.explanation-box {
-  display: none; margin-top: 1.2rem;
-  background: rgba(0,201,167,0.06); border: 1px solid rgba(0,201,167,0.2);
-  border-radius: 12px; padding: 1.2rem;
-}
-.explanation-box.show { display: block; }
-.expl-title { font-size: 0.75rem; letter-spacing: 2px; color: var(--emerald); font-weight: 700; margin-bottom: 0.5rem; }
-.expl-text { font-size: 0.9rem; color: var(--muted); line-height: 1.7; }
+    .explanation-box {
+      display: none; margin-top: 1.2rem;
+      background: rgba(0,201,167,0.06); border: 1px solid rgba(0,201,167,0.2);
+      border-radius: 12px; padding: 1.2rem;
+    }
+    .explanation-box.show { display: block; }
+    .expl-title { font-size: 0.75rem; letter-spacing: 2px; color: var(--emerald); font-weight: 700; margin-bottom: 0.5rem; }
+    .expl-text { font-size: 0.9rem; color: var(--muted); line-height: 1.7; }
 
-.btn-next {
-  width: 100%; padding: 0.9rem;
-  background: rgba(0,201,167,0.1); border: 1px solid rgba(0,201,167,0.3);
-  border-radius: 12px; color: var(--emerald);
-  cursor: pointer; font-family: 'Syne'; font-size: 0.95rem; font-weight: 700;
-  transition: all 0.25s; display: none; margin-top: 1rem;
-}
-.btn-next:hover { background: rgba(0,201,167,0.2); }
-.btn-next.show { display: block; }
+    .btn-next {
+      width: 100%; padding: 0.9rem;
+      background: rgba(0,201,167,0.1); border: 1px solid rgba(0,201,167,0.3);
+      border-radius: 12px; color: var(--emerald);
+      cursor: pointer; font-family: 'Syne'; font-size: 0.95rem; font-weight: 700;
+      transition: all 0.25s; display: none; margin-top: 1rem;
+    }
+    .btn-next:hover { background: rgba(0,201,167,0.2); }
+    .btn-next.show { display: block; }
 
-/* LOADING */
-.loading-overlay {
-  display: none; text-align: center; padding: 3rem;
-}
-.loading-overlay.show { display: block; }
-.spinner {
-  width: 50px; height: 50px; margin: 0 auto 1.5rem;
-  border: 3px solid rgba(0,201,167,0.2);
-  border-top-color: var(--emerald);
-  border-radius: 50%; animation: spin 0.8s linear infinite;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
+    /* LOADING */
+    .loading-overlay {
+      display: none; text-align: center; padding: 3rem;
+    }
+    .loading-overlay.show { display: block; }
+    .spinner {
+      width: 50px; height: 50px; margin: 0 auto 1.5rem;
+      border: 3px solid rgba(0,201,167,0.2);
+      border-top-color: var(--emerald);
+      border-radius: 50%; animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
-/* RESULTS */
-.results-card {
-  display: none; background: rgba(26,35,64,0.85);
-  border: 1px solid rgba(0,201,167,0.2); border-radius: 24px; padding: 2.5rem;
-  text-align: center; backdrop-filter: blur(16px);
-}
-.results-card.show { display: block; }
-.result-emoji { font-size: 4rem; margin-bottom: 1rem; }
-.result-score { font-size: 3rem; font-weight: 800; color: var(--emerald); }
-.result-msg { font-size: 1rem; color: var(--muted); margin: 0.5rem 0 1.5rem; }
-.result-msg-ar { font-family: 'Tajawal'; direction: rtl; }
-.btn-retry {
-  padding: 0.8rem 2rem; background: linear-gradient(135deg, var(--emerald), var(--emerald-dark));
-  border: none; border-radius: 12px; color: white; cursor: pointer;
-  font-family: 'Syne'; font-size: 0.95rem; font-weight: 700; margin: 0.4rem;
-}
-.btn-home {
-  padding: 0.8rem 2rem; background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; color: var(--muted);
-  cursor: pointer; font-family: 'Syne'; font-size: 0.95rem; text-decoration: none;
-  display: inline-block; margin: 0.4rem;
-}
-@media(max-width:600px) { .options-grid { gap: 0.5rem; } .opt-btn { font-size: 0.78rem; padding: 0.5rem 0.8rem; } }
-```
-
+    /* RESULTS */
+    .results-card {
+      display: none; background: rgba(26,35,64,0.85);
+      border: 1px solid rgba(0,201,167,0.2); border-radius: 24px; padding: 2.5rem;
+      text-align: center; backdrop-filter: blur(16px);
+    }
+    .results-card.show { display: block; }
+    .result-emoji { font-size: 4rem; margin-bottom: 1rem; }
+    .result-score { font-size: 3rem; font-weight: 800; color: var(--emerald); }
+    .result-msg { font-size: 1rem; color: var(--muted); margin: 0.5rem 0 1.5rem; }
+    .result-msg-ar { font-family: 'Tajawal'; direction: rtl; }
+    .btn-retry {
+      padding: 0.8rem 2rem; background: linear-gradient(135deg, var(--emerald), var(--emerald-dark));
+      border: none; border-radius: 12px; color: white; cursor: pointer;
+      font-family: 'Syne'; font-size: 0.95rem; font-weight: 700; margin: 0.4rem;
+    }
+    .btn-home {
+      padding: 0.8rem 2rem; background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; color: var(--muted);
+      cursor: pointer; font-family: 'Syne'; font-size: 0.95rem; text-decoration: none;
+      display: inline-block; margin: 0.4rem;
+    }
+    @media(max-width:600px) { .options-grid { gap: 0.5rem; } .opt-btn { font-size: 0.78rem; padding: 0.5rem 0.8rem; } }
   </style>
 </head>
 <body>
@@ -217,7 +213,6 @@ main { position: relative; z-index: 1; max-width: 900px; margin: 0 auto; padding
   </div>
 
   <!-- SETUP -->
-
   <div class="setup-card" id="setupCard">
     <div class="steps">
       <div class="step active" id="s1"></div>
@@ -227,52 +222,48 @@ main { position: relative; z-index: 1; max-width: 900px; margin: 0 auto; padding
       <div class="step" id="s5"></div>
     </div>
 
-```
-<!-- ANNÉE SCOLAIRE -->
-<div class="select-group" id="grpAnnee">
-  <div class="select-label">
-    Année scolaire <span class="label-ar">السنة الدراسية</span>
-  </div>
-  <div class="options-grid" id="optAnnee"></div>
-</div>
+    <!-- ANNÉE SCOLAIRE -->
+    <div class="select-group" id="grpAnnee">
+      <div class="select-label">
+        Année scolaire <span class="label-ar">السنة الدراسية</span>
+      </div>
+      <div class="options-grid" id="optAnnee"></div>
+    </div>
 
-<!-- FILIÈRE (lycée only) -->
-<div class="select-group hidden" id="grpFiliere">
-  <div class="select-label">Filière <span class="label-ar">الشعبة</span></div>
-  <div class="options-grid" id="optFiliere"></div>
-</div>
+    <!-- FILIÈRE (lycée only) -->
+    <div class="select-group hidden" id="grpFiliere">
+      <div class="select-label">Filière <span class="label-ar">الشعبة</span></div>
+      <div class="options-grid" id="optFiliere"></div>
+    </div>
 
-<!-- MATIÈRE -->
-<div class="select-group hidden" id="grpMatiere">
-  <div class="select-label">Matière <span class="label-ar">المادة</span></div>
-  <div class="options-grid" id="optMatiere"></div>
-</div>
+    <!-- MATIÈRE -->
+    <div class="select-group hidden" id="grpMatiere">
+      <div class="select-label">Matière <span class="label-ar">المادة</span></div>
+      <div class="options-grid" id="optMatiere"></div>
+    </div>
 
-<!-- LEÇON -->
-<div class="select-group hidden" id="grpLecon">
-  <div class="select-label">Leçon <span class="label-ar">الدرس</span></div>
-  <div class="options-grid" id="optLecon"></div>
-</div>
+    <!-- LEÇON -->
+    <div class="select-group hidden" id="grpLecon">
+      <div class="select-label">Leçon <span class="label-ar">الدرس</span></div>
+      <div class="options-grid" id="optLecon"></div>
+    </div>
 
-<!-- DIFFICULTÉ -->
-<div class="select-group hidden" id="grpDiff">
-  <div class="select-label">Difficulté <span class="label-ar">مستوى الصعوبة</span></div>
-  <div class="options-grid">
-    <button class="opt-btn diff-easy" onclick="selectDiff('Facile','هيّن')">😊 Facile · هيّن</button>
-    <button class="opt-btn diff-normal" onclick="selectDiff('Normale','عادي')">🎯 Normale · عادي</button>
-    <button class="opt-btn diff-hard" onclick="selectDiff('Difficile','صعب')">🔥 Difficile · صعب</button>
-  </div>
-</div>
+    <!-- DIFFICULTÉ -->
+    <div class="select-group hidden" id="grpDiff">
+      <div class="select-label">Difficulté <span class="label-ar">مستوى الصعوبة</span></div>
+      <div class="options-grid">
+        <button class="opt-btn diff-easy" onclick="selectDiff('Facile','هيّن')">😊 Facile · هيّن</button>
+        <button class="opt-btn diff-normal" onclick="selectDiff('Normale','عادي')">🎯 Normale · عادي</button>
+        <button class="opt-btn diff-hard" onclick="selectDiff('Difficile','صعب')">🔥 Difficile · صعب</button>
+      </div>
+    </div>
 
-<button class="btn-start" id="btnStart" disabled onclick="startQuiz()">
-  Commencer le Quiz · ابدأ الاختبار 🚀
-</button>
-```
-
+    <button class="btn-start" id="btnStart" disabled onclick="startQuiz()">
+      Commencer le Quiz · ابدأ الاختبار 🚀
+    </button>
   </div>
 
   <!-- LOADING -->
-
   <div class="loading-overlay" id="loadingOverlay">
     <div class="spinner"></div>
     <p style="color:var(--emerald);font-weight:700;font-size:1.1rem;">Génération des questions...</p>
@@ -280,7 +271,6 @@ main { position: relative; z-index: 1; max-width: 900px; margin: 0 auto; padding
   </div>
 
   <!-- QUIZ -->
-
   <div class="quiz-area" id="quizArea">
     <div class="quiz-header">
       <div class="quiz-info" id="quizInfo">Question 1/10</div>
@@ -292,7 +282,6 @@ main { position: relative; z-index: 1; max-width: 900px; margin: 0 auto; padding
   </div>
 
   <!-- RESULTS -->
-
   <div class="results-card" id="resultsCard">
     <div class="result-emoji" id="resultEmoji">🏆</div>
     <div class="result-score" id="resultScore">8/10</div>
@@ -880,251 +869,256 @@ function renderExerciceCurrent() {
           style="width:100%;min-height:120px;background:rgba(255,255,255,.05);border:1.5px solid rgba(167,139,250,.3);border-radius:12px;padding:.9rem;color:var(--white);font-family:'Syne';font-size:.88rem;resize:vertical;outline:none;line-height:1.6"
           oninput="this.style.borderColor='var(--purple)'"
         ></textarea>
+      </div>
 
-```
-  </div>
+      <button onclick="submitAnswer()" id="btnSubmitAnswer"
+        style="width:100%;padding:.9rem;background:linear-gradient(135deg,var(--purple),#7c5fe6);border:none;border-radius:12px;color:white;font-family:'Syne';font-size:1rem;font-weight:700;cursor:pointer;transition:all .3s">
+        ✅ Soumettre ma réponse · إرسال الإجابة
+      </button>
 
-  <button onclick="submitAnswer()" id="btnSubmitAnswer"
-    style="width:100%;padding:.9rem;background:linear-gradient(135deg,var(--purple),#7c5fe6);border:none;border-radius:12px;color:white;font-family:'Syne';font-size:1rem;font-weight:700;cursor:pointer;transition:all .3s">
-    ✅ Soumettre ma réponse · إرسال الإجابة
-  </button>
-
-  <div id="evalResult" style="display:none;margin-top:1.2rem"></div>
-</div>`;
-```
-
+      <div id="evalResult" style="display:none;margin-top:1.2rem"></div>
+    </div>`;
 }
 
 async function submitAnswer() {
-const answer = document.getElementById(‘studentAnswer’).value.trim();
-if (!answer) {
-alert(‘Écris ta réponse avant de soumettre ! · اكتب إجابتك قبل الإرسال!’);
-return;
-}
+  const answer = document.getElementById('studentAnswer').value.trim();
+  if (!answer) {
+    alert('Écris ta réponse avant de soumettre ! · اكتب إجابتك قبل الإرسال!');
+    return;
+  }
 
-const btn = document.getElementById(‘btnSubmitAnswer’);
-btn.disabled = true;
-btn.textContent = ‘⏳ Correction en cours… جارٍ التصحيح…’;
+  const btn = document.getElementById('btnSubmitAnswer');
+  btn.disabled = true;
+  btn.textContent = '⏳ Correction en cours... جارٍ التصحيح...';
 
-const ex = exercicesData[exCurrent];
+  const ex = exercicesData[exCurrent];
 
-try {
-const res = await fetch(`${API}/api/ia/evaluate`, {
-method: ‘POST’,
-headers: { ‘Content-Type’: ‘application/json’, ‘Authorization’: ’Bearer ’ + localStorage.getItem(‘token’) },
-body: JSON.stringify({
-enonce:        ex.enonce,
-donnees:       ex.donnees || ‘’,
-questions:     ex.questions || [],
-correction:    ex.correction,
-studentAnswer: answer,
-bareme:        ex.bareme || 5,
-matiere:       state.matiere,
-annee:         state.annee?.label
-})
-});
-const eval_data = await res.json();
+  try {
+    const res = await fetch(`${API}/api/ia/evaluate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('token') },
+      body: JSON.stringify({
+        enonce:        ex.enonce,
+        donnees:       ex.donnees || '',
+        questions:     ex.questions || [],
+        correction:    ex.correction,
+        studentAnswer: answer,
+        bareme:        ex.bareme || 5,
+        matiere:       state.matiere,
+        annee:         state.annee?.label
+      })
+    });
+    const eval_data = await res.json();
 
-```
-if (!res.ok) throw new Error(eval_data.message);
+    if (!res.ok) throw new Error(eval_data.message);
 
-const pts = eval_data.points_obtenus || 0;
-exTotalPoints += pts;
-document.getElementById('quizScore').textContent = `${exTotalPoints}/${exMaxPoints} pts`;
+    const pts = eval_data.points_obtenus || 0;
+    exTotalPoints += pts;
+    document.getElementById('quizScore').textContent = `${exTotalPoints}/${exMaxPoints} pts`;
 
-const color = pts >= (ex.bareme * 0.7) ? 'var(--emerald)' : pts >= (ex.bareme * 0.4) ? 'var(--gold)' : 'var(--coral)';
-const emoji = pts >= (ex.bareme * 0.7) ? '🌟' : pts >= (ex.bareme * 0.4) ? '👍' : '💪';
+    const color = pts >= (ex.bareme * 0.7) ? 'var(--emerald)' : pts >= (ex.bareme * 0.4) ? 'var(--gold)' : 'var(--coral)';
+    const emoji = pts >= (ex.bareme * 0.7) ? '🌟' : pts >= (ex.bareme * 0.4) ? '👍' : '💪';
 
-document.getElementById('evalResult').style.display = 'block';
-document.getElementById('evalResult').innerHTML = `
-  <div style="background:rgba(26,35,64,.9);border:1px solid ${color};border-radius:14px;padding:1.2rem">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
-      <div style="font-size:1.1rem;font-weight:800;color:${color}">${emoji} ${eval_data.appreciation || 'Corrigé'}</div>
-      <div style="font-size:1.3rem;font-weight:800;color:${color}">${pts}/${ex.bareme} pts</div>
-    </div>
-    ${eval_data.points_positifs ? `<div style="margin-bottom:.8rem"><div style="font-size:.7rem;letter-spacing:1px;color:var(--emerald);font-weight:700;margin-bottom:.3rem">✅ CE QUE TU AS BIEN FAIT</div><div style="font-size:.85rem;color:var(--muted)">${eval_data.points_positifs}</div></div>` : ''}
-    <div style="margin-bottom:.8rem">
-      <div style="font-size:.7rem;letter-spacing:1px;color:var(--gold);font-weight:700;margin-bottom:.3rem">📖 CORRECTION DÉTAILLÉE · التصحيح التفصيلي</div>
-      <div style="font-size:.85rem;color:var(--muted);line-height:1.7">${(eval_data.correction_detaillee||'').replace(/\n/g,'<br>')}</div>
-    </div>
-    ${eval_data.points_ameliorer ? `<div style="margin-bottom:.8rem"><div style="font-size:.7rem;letter-spacing:1px;color:var(--coral);font-weight:700;margin-bottom:.3rem">💡 À AMÉLIORER</div><div style="font-size:.85rem;color:var(--muted)">${eval_data.points_ameliorer}</div></div>` : ''}
-    ${eval_data.encouragement ? `<div style="font-size:.9rem;color:var(--purple);font-style:italic;margin-top:.5rem;text-align:center">${eval_data.encouragement}</div>` : ''}
-  </div>`;
+    document.getElementById('evalResult').style.display = 'block';
+    document.getElementById('evalResult').innerHTML = `
+      <div style="background:rgba(26,35,64,.9);border:1px solid ${color};border-radius:14px;padding:1.2rem">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+          <div style="font-size:1.1rem;font-weight:800;color:${color}">${emoji} ${eval_data.appreciation || 'Corrigé'}</div>
+          <div style="font-size:1.3rem;font-weight:800;color:${color}">${pts}/${ex.bareme} pts</div>
+        </div>
+        ${eval_data.points_positifs ? `<div style="margin-bottom:.8rem"><div style="font-size:.7rem;letter-spacing:1px;color:var(--emerald);font-weight:700;margin-bottom:.3rem">✅ CE QUE TU AS BIEN FAIT</div><div style="font-size:.85rem;color:var(--muted)">${eval_data.points_positifs}</div></div>` : ''}
+        <div style="margin-bottom:.8rem">
+          <div style="font-size:.7rem;letter-spacing:1px;color:var(--gold);font-weight:700;margin-bottom:.3rem">📖 CORRECTION DÉTAILLÉE · التصحيح التفصيلي</div>
+          <div style="font-size:.85rem;color:var(--muted);line-height:1.7">${(eval_data.correction_detaillee||'').replace(/\n/g,'<br>')}</div>
+        </div>
+        ${eval_data.points_ameliorer ? `<div style="margin-bottom:.8rem"><div style="font-size:.7rem;letter-spacing:1px;color:var(--coral);font-weight:700;margin-bottom:.3rem">💡 À AMÉLIORER</div><div style="font-size:.85rem;color:var(--muted)">${eval_data.points_ameliorer}</div></div>` : ''}
+        ${eval_data.encouragement ? `<div style="font-size:.9rem;color:var(--purple);font-style:italic;margin-top:.5rem;text-align:center">${eval_data.encouragement}</div>` : ''}
+      </div>`;
 
-btn.textContent = exCurrent < exercicesData.length - 1
-  ? 'Exercice suivant → التمرين التالي'
-  : 'Voir les résultats 🏆';
-btn.style.background = 'rgba(0,201,167,0.1)';
-btn.style.border = '1px solid rgba(0,201,167,0.3)';
-btn.style.color = 'var(--emerald)';
-btn.disabled = false;
-btn.onclick = nextExercice;
-```
+    btn.textContent = exCurrent < exercicesData.length - 1
+      ? 'Exercice suivant → التمرين التالي'
+      : 'Voir les résultats 🏆';
+    btn.style.background = 'rgba(0,201,167,0.1)';
+    btn.style.border = '1px solid rgba(0,201,167,0.3)';
+    btn.style.color = 'var(--emerald)';
+    btn.disabled = false;
+    btn.onclick = nextExercice;
 
-} catch (e) {
-btn.textContent = ‘✅ Soumettre ma réponse · إرسال الإجابة’;
-btn.disabled = false;
-alert(’Erreur: ’ + e.message);
-}
+  } catch (e) {
+    btn.textContent = '✅ Soumettre ma réponse · إرسال الإجابة';
+    btn.disabled = false;
+    alert('Erreur: ' + e.message);
+  }
 }
 
 function nextExercice() {
-exCurrent++;
-if (exCurrent >= exercicesData.length) {
-showResultsExercices();
-} else {
-renderExerciceCurrent();
-}
+  exCurrent++;
+  if (exCurrent >= exercicesData.length) {
+    showResultsExercices();
+  } else {
+    renderExerciceCurrent();
+  }
 }
 
 function showResultsExercices() {
-document.getElementById(‘quizArea’).classList.remove(‘active’);
-const rc  = document.getElementById(‘resultsCard’);
-rc.classList.add(‘show’);
-const pct = exMaxPoints > 0 ? Math.round((exTotalPoints / exMaxPoints) * 100) : 0;
-document.getElementById(‘resultEmoji’).textContent  = pct >= 70 ? ‘🏆’ : pct >= 40 ? ‘👍’ : ‘💪’;
-document.getElementById(‘resultScore’).textContent  = `${exTotalPoints}/${exMaxPoints}`;
-document.getElementById(‘resultMsg’).textContent    = pct >= 70
-? `Excellent ! ${pct}% — Tu maîtrises bien cette leçon !`
-: pct >= 40
-? `Bien ! ${pct}% — Continue à t'entraîner !`
-: `${pct}% — Ne te décourage pas, révise et réessaie !`;
-document.getElementById(‘resultMsgAr’).textContent = pct >= 70
-? `ممتاز! ${pct}٪ — أنت تتقن هذا الدرس جيداً!`
-: pct >= 40
-? `أحسنت! ${pct}٪ — واصل التدريب!`
-: `${pct}٪ — لا تستسلم، راجع الدرس وحاول مجدداً!`;
+  document.getElementById('quizArea').classList.remove('active');
+  const rc  = document.getElementById('resultsCard');
+  rc.classList.add('show');
+  const pct = exMaxPoints > 0 ? Math.round((exTotalPoints / exMaxPoints) * 100) : 0;
+  document.getElementById('resultEmoji').textContent  = pct >= 70 ? '🏆' : pct >= 40 ? '👍' : '💪';
+  document.getElementById('resultScore').textContent  = `${exTotalPoints}/${exMaxPoints}`;
+  document.getElementById('resultMsg').textContent    = pct >= 70
+    ? `Excellent ! ${pct}% — Tu maîtrises bien cette leçon !`
+    : pct >= 40
+      ? `Bien ! ${pct}% — Continue à t'entraîner !`
+      : `${pct}% — Ne te décourage pas, révise et réessaie !`;
+  document.getElementById('resultMsgAr').textContent = pct >= 70
+    ? `ممتاز! ${pct}٪ — أنت تتقن هذا الدرس جيداً!`
+    : pct >= 40
+      ? `أحسنت! ${pct}٪ — واصل التدريب!`
+      : `${pct}٪ — لا تستسلم، راجع الدرس وحاول مجدداً!`;
 
-const tkn = localStorage.getItem(‘token’);
-if (tkn) {
-fetch(`${API}/api/quiz/submit`, {
-method: ‘POST’,
-headers: { ‘Content-Type’: ‘application/json’, ‘Authorization’: ’Bearer ’ + tkn },
-body: JSON.stringify({
-score: exTotalPoints, total: exMaxPoints,
-matiere: state.matiere, lecon: state.lecon,
-annee: state.annee?.id, isMath: true,
-points: exTotalPoints * 2
-})
-}).catch(() => {});
-}
+  const tkn = localStorage.getItem('token');
+  if (tkn) {
+    fetch(`${API}/api/quiz/submit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tkn },
+      body: JSON.stringify({
+        score: exTotalPoints, total: exMaxPoints,
+        matiere: state.matiere, lecon: state.lecon,
+        annee: state.annee?.id, isMath: true,
+        points: exTotalPoints * 2
+      })
+    }).catch(() => {});
+  }
 }
 
 function useFallbackQuiz() {
-quizData.questions = [
-{ question:`Quel est le concept principal de la leçon "${state.lecon}" en ${state.matiere} ?`, options:[‘Option A’,‘Option B’,‘Option C’,‘Option D’], correct:0, explanation:`Cette leçon fait partie du programme ${state.annee?.label} selon le curriculum algérien.` },
-{ question:`Selon le programme algérien, quelle est la définition principale liée à "${state.lecon}" ?`, options:[‘Définition A’,‘Définition B’,‘Définition C’,‘Définition D’], correct:1, explanation:`Selon la méthodologie officielle algérienne, ce concept est fondamental.` },
-];
-quizData.current = 0; quizData.score = 0;
-document.getElementById(‘loadingOverlay’).classList.remove(‘show’);
-document.getElementById(‘quizArea’).classList.add(‘active’);
-document.getElementById(‘btnNext’).onclick = nextQuestion;
-renderQuestion();
+  quizData.questions = [
+    { question:`Quel est le concept principal de la leçon "${state.lecon}" en ${state.matiere} ?`, options:['Option A','Option B','Option C','Option D'], correct:0, explanation:`Cette leçon fait partie du programme ${state.annee?.label} selon le curriculum algérien.` },
+    { question:`Selon le programme algérien, quelle est la définition principale liée à "${state.lecon}" ?`, options:['Définition A','Définition B','Définition C','Définition D'], correct:1, explanation:`Selon la méthodologie officielle algérienne, ce concept est fondamental.` },
+  ];
+  quizData.current = 0; quizData.score = 0;
+  document.getElementById('loadingOverlay').classList.remove('show');
+  document.getElementById('quizArea').classList.add('active');
+  document.getElementById('btnNext').onclick = nextQuestion;
+  renderQuestion();
 }
 
 // ══════════════════════════════════════════
 // RENDER QUESTION
 // ══════════════════════════════════════════
 function renderQuestion() {
-const q = quizData.questions[quizData.current];
-const total = quizData.questions.length;
-const pct = (quizData.current / total) * 100;
+  const q = quizData.questions[quizData.current];
+  const total = quizData.questions.length;
+  const pct = (quizData.current / total) * 100;
 
-document.getElementById(‘quizInfo’).textContent = `Question ${quizData.current+1}/${total}`;
-document.getElementById(‘quizScore’).textContent = `Score: ${quizData.score}/${total}`;
-document.getElementById(‘progressFill’).style.width = pct + ‘%’;
-document.getElementById(‘btnNext’).classList.remove(‘show’);
+  document.getElementById('quizInfo').textContent = `Question ${quizData.current+1}/${total}`;
+  document.getElementById('quizScore').textContent = `Score: ${quizData.score}/${total}`;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('btnNext').classList.remove('show');
 
-const letters = [‘A’,‘B’,‘C’,‘D’];
-const html = `<div class="question-card"> <div class="q-num">QUESTION ${quizData.current+1} · السؤال ${toArabicNum(quizData.current+1)}</div> <div class="q-text">${q.question}</div> <div class="answers-grid"> ${q.options.map((opt,i) =>`
-<button class="ans-btn" onclick="selectAnswer(${i})" id="ans_${i}">
-<span class="ans-letter">${letters[i]}</span>
-${opt}
-</button>
-`).join('')} </div> <div class="explanation-box" id="explanationBox"> <div class="expl-title">💡 EXPLICATION · الشرح</div> <div class="expl-text">${q.explanation || ''}</div> </div> </div> `;
-document.getElementById(‘questionContainer’).innerHTML = html;
+  const letters = ['A','B','C','D'];
+  const html = `
+    <div class="question-card">
+      <div class="q-num">QUESTION ${quizData.current+1} · السؤال ${toArabicNum(quizData.current+1)}</div>
+      <div class="q-text">${q.question}</div>
+      <div class="answers-grid">
+        ${q.options.map((opt,i) => `
+          <button class="ans-btn" onclick="selectAnswer(${i})" id="ans_${i}">
+            <span class="ans-letter">${letters[i]}</span>
+            ${opt}
+          </button>
+        `).join('')}
+      </div>
+      <div class="explanation-box" id="explanationBox">
+        <div class="expl-title">💡 EXPLICATION · الشرح</div>
+        <div class="expl-text">${q.explanation || ''}</div>
+      </div>
+    </div>
+  `;
+  document.getElementById('questionContainer').innerHTML = html;
 }
 
 function toArabicNum(n) {
-return n.toString().replace(/\d/g, d => ‘٠١٢٣٤٥٦٧٨٩’[d]);
+  return n.toString().replace(/\d/g, d => '٠١٢٣٤٥٦٧٨٩'[d]);
 }
 
 function selectAnswer(idx) {
-const q = quizData.questions[quizData.current];
-document.querySelectorAll(’.ans-btn’).forEach(b => b.disabled = true);
-document.getElementById(`ans_${idx}`).classList.add(idx === q.correct ? ‘correct’ : ‘wrong’);
-if (idx !== q.correct) document.getElementById(`ans_${q.correct}`).classList.add(‘correct’);
-if (idx === q.correct) quizData.score++;
-document.getElementById(‘quizScore’).textContent = `Score: ${quizData.score}/${quizData.questions.length}`;
-document.getElementById(‘explanationBox’).classList.add(‘show’);
-document.getElementById(‘btnNext’).classList.add(‘show’);
-if (quizData.current === quizData.questions.length - 1) {
-document.getElementById(‘btnNext’).textContent = ‘Voir les résultats · النتائج 🏆’;
-}
+  const q = quizData.questions[quizData.current];
+  document.querySelectorAll('.ans-btn').forEach(b => b.disabled = true);
+  document.getElementById(`ans_${idx}`).classList.add(idx === q.correct ? 'correct' : 'wrong');
+  if (idx !== q.correct) document.getElementById(`ans_${q.correct}`).classList.add('correct');
+  if (idx === q.correct) quizData.score++;
+  document.getElementById('quizScore').textContent = `Score: ${quizData.score}/${quizData.questions.length}`;
+  document.getElementById('explanationBox').classList.add('show');
+  document.getElementById('btnNext').classList.add('show');
+  if (quizData.current === quizData.questions.length - 1) {
+    document.getElementById('btnNext').textContent = 'Voir les résultats · النتائج 🏆';
+  }
 }
 
 function nextQuestion() {
-quizData.current++;
-if (quizData.current >= quizData.questions.length) {
-showResults();
-} else {
-renderQuestion();
-}
+  quizData.current++;
+  if (quizData.current >= quizData.questions.length) {
+    showResults();
+  } else {
+    renderQuestion();
+  }
 }
 
 // ══════════════════════════════════════════
 // RESULTS
 // ══════════════════════════════════════════
 async function showResults() {
-document.getElementById(‘quizArea’).classList.remove(‘active’);
-const total = quizData.questions.length;
-const score = quizData.score;
-const pct = Math.round((score/total)*100);
-const rc = document.getElementById(‘resultsCard’);
-rc.classList.add(‘show’);
+  document.getElementById('quizArea').classList.remove('active');
+  const total = quizData.questions.length;
+  const score = quizData.score;
+  const pct = Math.round((score/total)*100);
+  const rc = document.getElementById('resultsCard');
+  rc.classList.add('show');
 
-let emoji = ‘🏆’, msgFr = ‘’, msgAr = ‘’;
-if (pct >= 80) { emoji = ‘🏆’; msgFr = `Excellent ! Tu as obtenu ${pct}% ! Continue comme ça !`; msgAr = `ممتاز! حصلت على ${pct}٪! استمر هكذا!`; }
-else if (pct >= 60) { emoji = ‘👍’; msgFr = `Bien joué ! ${pct}% — encore un effort !`; msgAr = `أحسنت! ${pct}٪ — اجتهد أكثر!`; }
-else { emoji = ‘💪’; msgFr = `${pct}% — Ne te décourage pas ! La révision paie toujours.`; msgAr = `${pct}٪ — لا تستسلم! المراجعة ستنفع دائماً.`; }
+  let emoji = '🏆', msgFr = '', msgAr = '';
+  if (pct >= 80) { emoji = '🏆'; msgFr = `Excellent ! Tu as obtenu ${pct}% ! Continue comme ça !`; msgAr = `ممتاز! حصلت على ${pct}٪! استمر هكذا!`; }
+  else if (pct >= 60) { emoji = '👍'; msgFr = `Bien joué ! ${pct}% — encore un effort !`; msgAr = `أحسنت! ${pct}٪ — اجتهد أكثر!`; }
+  else { emoji = '💪'; msgFr = `${pct}% — Ne te décourage pas ! La révision paie toujours.`; msgAr = `${pct}٪ — لا تستسلم! المراجعة ستنفع دائماً.`; }
 
-document.getElementById(‘resultEmoji’).textContent = emoji;
-document.getElementById(‘resultScore’).textContent = `${score}/${total}`;
-document.getElementById(‘resultMsg’).textContent = msgFr;
-document.getElementById(‘resultMsgAr’).textContent = msgAr;
+  document.getElementById('resultEmoji').textContent = emoji;
+  document.getElementById('resultScore').textContent = `${score}/${total}`;
+  document.getElementById('resultMsg').textContent = msgFr;
+  document.getElementById('resultMsgAr').textContent = msgAr;
 
-// Save score
-const token = localStorage.getItem(‘token’);
-if (token) {
-try {
-await fetch(‘https://edumind-api.onrender.com/api/quiz/submit’, {
-method: ‘POST’,
-headers: { ‘Content-Type’:‘application/json’,‘Authorization’:’Bearer ’+token },
-body: JSON.stringify({ score, total, matiere: state.matiere, lecon: state.lecon, annee: state.annee?.id, points: score * 10 })
-});
-} catch {}
-}
+  // Save score
+  const token = localStorage.getItem('token');
+  if (token) {
+    try {
+      await fetch('https://edumind-api.onrender.com/api/quiz/submit', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json','Authorization':'Bearer '+token },
+        body: JSON.stringify({ score, total, matiere: state.matiere, lecon: state.lecon, annee: state.annee?.id, points: score * 10 })
+      });
+    } catch {}
+  }
 }
 
 function resetQuiz() {
-state = { annee:null, filiere:null, matiere:null, lecon:null, diff:null };
-quizData = { questions:[], current:0, score:0 };
-document.getElementById(‘resultsCard’).classList.remove(‘show’);
-document.getElementById(‘quizArea’).classList.remove(‘active’);
-document.getElementById(‘setupCard’).style.display = ‘’;
-document.getElementById(‘grpFiliere’).classList.add(‘hidden’);
-document.getElementById(‘grpMatiere’).classList.add(‘hidden’);
-document.getElementById(‘grpLecon’).classList.add(‘hidden’);
-document.getElementById(‘grpDiff’).classList.add(‘hidden’);
-document.querySelectorAll(’.opt-btn’).forEach(b => b.classList.remove(‘selected’));
-document.getElementById(‘btnStart’).disabled = true;
-init();
+  state = { annee:null, filiere:null, matiere:null, lecon:null, diff:null };
+  quizData = { questions:[], current:0, score:0 };
+  document.getElementById('resultsCard').classList.remove('show');
+  document.getElementById('quizArea').classList.remove('active');
+  document.getElementById('setupCard').style.display = '';
+  document.getElementById('grpFiliere').classList.add('hidden');
+  document.getElementById('grpMatiere').classList.add('hidden');
+  document.getElementById('grpLecon').classList.add('hidden');
+  document.getElementById('grpDiff').classList.add('hidden');
+  document.querySelectorAll('.opt-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('btnStart').disabled = true;
+  init();
 }
 
 // Boot
-document.getElementById(‘optAnnee’).innerHTML = ‘’;
+document.getElementById('optAnnee').innerHTML = '';
 init();
 </script>
-
 </body>
 </html>
