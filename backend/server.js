@@ -170,8 +170,12 @@ app.post('/api/ia/quiz', auth, async function(req, res) {
     if (isMath) {
       prompt = 'Cree 4 exercices de ' + b.matiere + ' pour ' + ctx + '. Maths en texte simple (/ ^ racine()). JSON: {"exercices":[{"numero":1,"titre":"titre","enonce":"enonce","donnees":"","questions":["1) question"],"correction":"correction","bareme":5},{"numero":2,"titre":"titre","enonce":"enonce","donnees":"","questions":["1) question"],"correction":"correction","bareme":5},{"numero":3,"titre":"titre","enonce":"enonce","donnees":"","questions":["1) question"],"correction":"correction","bareme":5},{"numero":4,"titre":"titre","enonce":"enonce","donnees":"","questions":["1) question"],"correction":"correction","bareme":5}]}';
     } else {
-      var isAr = ['Arabe', 'Education Islamique', 'Litterature Arabe'].indexOf(b.matiere) !== -1;
-      prompt = 'Cree 8 QCM sur ' + ctx + '. ' + (isAr ? 'En arabe.' : 'En francais.') + ' JSON: {"questions":[{"question":"q1","options":["A) a","B) b","C) c","D) d"],"correct":0,"explication":"exp"},{"question":"q2","options":["A) a","B) b","C) c","D) d"],"correct":1,"explication":"exp"},{"question":"q3","options":["A) a","B) b","C) c","D) d"],"correct":2,"explication":"exp"},{"question":"q4","options":["A) a","B) b","C) c","D) d"],"correct":0,"explication":"exp"},{"question":"q5","options":["A) a","B) b","C) c","D) d"],"correct":3,"explication":"exp"},{"question":"q6","options":["A) a","B) b","C) c","D) d"],"correct":1,"explication":"exp"},{"question":"q7","options":["A) a","B) b","C) c","D) d"],"correct":2,"explication":"exp"},{"question":"q8","options":["A) a","B) b","C) c","D) d"],"correct":0,"explication":"exp"}]}';
+      var lang = 'en arabe classique (langue arabe soutenue)';
+      if (b.matiere === 'Francais') lang = 'en francais';
+      if (b.matiere === 'Anglais')  lang = 'in English';
+      if (b.matiere === 'Espagnol') lang = 'en espanol';
+      if (b.matiere === 'Allemand') lang = 'auf Deutsch';
+      prompt = 'Cree 8 QCM sur ' + ctx + '. ' + lang + '. JSON: {"questions":[{"question":"q1","options":["A) a","B) b","C) c","D) d"],"correct":0,"explication":"exp"},{"question":"q2","options":["A) a","B) b","C) c","D) d"],"correct":1,"explication":"exp"},{"question":"q3","options":["A) a","B) b","C) c","D) d"],"correct":2,"explication":"exp"},{"question":"q4","options":["A) a","B) b","C) c","D) d"],"correct":0,"explication":"exp"},{"question":"q5","options":["A) a","B) b","C) c","D) d"],"correct":3,"explication":"exp"},{"question":"q6","options":["A) a","B) b","C) c","D) d"],"correct":1,"explication":"exp"},{"question":"q7","options":["A) a","B) b","C) c","D) d"],"correct":2,"explication":"exp"},{"question":"q8","options":["A) a","B) b","C) c","D) d"],"correct":0,"explication":"exp"}]}';
     }
     var text = await callGroq(sys, prompt, true);
     var parsed = extractJSON(text);
